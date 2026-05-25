@@ -2373,6 +2373,14 @@
     </div>
 
     <div class="stack">
+      <!-- Reading progress -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title"><i class="ti ti-books" aria-hidden="true"></i> Reading progress</div>
+        </div>
+        <div class="card-body" id="monthly-reading-list"></div>
+      </div>
+
       <!-- Goals grid -->
       <div>
         <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);margin-bottom:12px;">Goals this month</div>
@@ -2841,6 +2849,15 @@ function greeting() {
 // INIT
 // ──────────────────────────────────────────
 function init() {
+  // Ensure all books have required fields
+  if (S.books) {
+    S.books.forEach(function(b) {
+      if (b.coverId === undefined) b.coverId = null;
+      if (b.isAudiobook === undefined) b.isAudiobook = false;
+      if (b.pctComplete === undefined) b.pctComplete = 0;
+    });
+  }
+
   const now = new Date();
   // Sidebar
   document.getElementById('sidebar-date').textContent =
@@ -3738,7 +3755,7 @@ function switchView(v) {
   if (v === 'notes') renderPastNotes();
   if (v === 'consistency') renderConsistency();
   if (v === 'weekly') { refreshWeekView(); renderWorkouts(); }
-  if (v === 'monthly') refreshMonthView();
+  if (v === 'monthly') { refreshMonthView(); renderMonthlyReading(); }
   if (v === 'settings') { renderGcalSettings(); updateGcalStatus(); }
 }
 
@@ -3763,6 +3780,51 @@ function escHtml(s) {
 // ──────────────────────────────────────────
 // CONSISTENCY HEATMAP
 // ──────────────────────────────────────────
+
+function renderMonthlyReading() {
+  var el = document.getElementById('monthly-reading-list');
+  if (!el) return;
+  var active = S.books ? S.books.filter(function(b) { return !b.finished; }) : [];
+  var finished = S.books ? S.books.filter(function(b) { return b.finished; }) : [];
+
+  if (!active.length && !finished.length) {
+    el.innerHTML = '<div class="empty">No books being tracked.</div>';
+    return;
+  }
+
+  var html = '';
+  active.forEach(function(b) {
+    var pct = b.isAudiobook ? (b.pctComplete || 0) : (b.totalPages > 0 ? Math.min(100, Math.round((b.currentPage / b.totalPages) * 100)) : 0);
+    var coverHtml = b.coverId
+      ? '<img style="width:32px;height:46px;border-radius:3px;object-fit:cover;flex-shrink:0;" src="https://covers.openlibrary.org/b/id/' + b.coverId + '-S.jpg" alt="" />'
+      : '<div style="width:32px;height:46px;border-radius:3px;background:var(--cream-mid);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink3);font-size:14px;"><i class="ti ti-book"></i></div>';
+    html += '<div style="display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--cream-mid);">'
+      + coverHtml
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(b.title) + '</div>'
+      + (b.author ? '<div style="font-size:11px;color:var(--ink3);">' + escHtml(b.author) + '</div>' : '')
+      + '</div>'
+      + '<div style="min-width:80px;text-align:right;">'
+      + '<div style="font-size:12px;font-weight:500;color:var(--sage);font-family:var(--font-mono);">' + pct + '%</div>'
+      + '<div style="height:4px;background:var(--cream-mid);border-radius:10px;overflow:hidden;margin-top:3px;"><div style="height:100%;border-radius:10px;background:linear-gradient(90deg,var(--sage-mid),var(--sage-light));width:' + pct + '%;"></div></div>'
+      + (b.isAudiobook ? '<div style="font-size:9px;color:var(--ink3);margin-top:2px;">audiobook</div>' : '<div style="font-size:9px;color:var(--ink3);margin-top:2px;">p.' + b.currentPage + '/' + b.totalPages + '</div>')
+      + '</div></div>';
+  });
+
+  if (finished.length) {
+    html += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--cream-dark);">'
+      + '<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink3);margin-bottom:6px;">Completed</div>';
+    finished.forEach(function(b) {
+      var coverHtml = b.coverId
+        ? '<img style="width:20px;height:28px;border-radius:2px;object-fit:cover;" src="https://covers.openlibrary.org/b/id/' + b.coverId + '-S.jpg" alt="" />'
+        : '<i class="ti ti-circle-check" style="color:var(--sage-mid);"></i>';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--ink2);">' + coverHtml + '<span>' + escHtml(b.title) + '</span></div>';
+    });
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
 function renderConsistency() {
   const presets = S.habits;
   if (!presets.length) {
@@ -4555,6 +4617,7 @@ function renderBooks() {
     }
     el.innerHTML = activeHtml + finishedHtml;
   });
+  if (typeof renderMonthlyReading === 'function') renderMonthlyReading();
 }
 
 function toggleBookForm() {
@@ -4620,10 +4683,7 @@ function addBookFromSearch(el) {
     var raw = el.getAttribute('data-book');
     var d = JSON.parse(decodeURIComponent(escape(atob(raw))));
     if (!S.books) S.books = [];
-    if (S.books.some(function(b) { return b.title.toLowerCase() === d.title.toLowerCase() && !b.finished; })) {
-      alert('This book is already in your list!');
-      return;
-    }
+    // Allow re-adding (user may have cleared display but data persists)
     S.books.push({
       id: uid(), title: d.title, author: d.author,
       currentPage: 0, totalPages: d.totalPages || 0,
