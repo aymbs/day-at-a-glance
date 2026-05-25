@@ -2733,25 +2733,31 @@ async function initCloudSync() {
   var cloudData = await loadFromCloud();
   if (!cloudData) return;
 
-  // Merge cloud data - cloud wins if it has more recent/more data
-  var localStr = JSON.stringify(S);
-  var def = defaultState();
-  var localIsDefault = S.tasks.length === 0 && S.books.length === 0 && Object.keys(S.notes).length === 0;
+  // Count how much data each side has
+  var localCount = (S.tasks || []).length + (S.books || []).length + Object.keys(S.notes || {}).length + (S.workouts || []).length;
+  var cloudCount = (cloudData.tasks || []).length + (cloudData.books || []).length + Object.keys(cloudData.notes || {}).length + (cloudData.workouts || []).length;
 
-  if (localIsDefault && (cloudData.tasks.length > 0 || cloudData.books.length > 0)) {
-    // Local is empty, cloud has data - use cloud
-    S.tasks = cloudData.tasks || S.tasks;
-    S.habits = cloudData.habits || S.habits;
-    S.books = cloudData.books || S.books;
-    S.workouts = cloudData.workouts || S.workouts;
-    S.workoutLogs = cloudData.workoutLogs || S.workoutLogs;
-    S.goals = cloudData.goals || S.goals;
-    S.weeklyPriorities = cloudData.weeklyPriorities || S.weeklyPriorities;
-    S.notes = cloudData.notes || S.notes;
-    S.intention = cloudData.intention || S.intention;
-    S.stickyNotes = cloudData.stickyNotes || S.stickyNotes;
-    S.pomSessions = cloudData.pomSessions || S.pomSessions;
-    S.settings = { ...S.settings, ...(cloudData.settings || {}) };
+  if (cloudCount === 0 && localCount > 0) {
+    // Cloud is empty, local has data - push local to cloud instead
+    console.log('Cloud empty, pushing local data up');
+    syncToSupabase();
+    return;
+  }
+
+  if (cloudCount >= localCount || localCount === 0) {
+    // Cloud has same or more data - use cloud
+    if (cloudData.tasks && cloudData.tasks.length) S.tasks = cloudData.tasks;
+    if (cloudData.habits && cloudData.habits.length) S.habits = cloudData.habits;
+    if (cloudData.books && cloudData.books.length) S.books = cloudData.books;
+    if (cloudData.workouts) S.workouts = cloudData.workouts;
+    if (cloudData.workoutLogs && Object.keys(cloudData.workoutLogs).length) S.workoutLogs = cloudData.workoutLogs;
+    if (cloudData.goals && cloudData.goals.length) S.goals = cloudData.goals;
+    if (cloudData.weeklyPriorities) S.weeklyPriorities = cloudData.weeklyPriorities;
+    if (cloudData.notes && Object.keys(cloudData.notes).length) S.notes = cloudData.notes;
+    if (cloudData.intention && Object.keys(cloudData.intention).length) S.intention = cloudData.intention;
+    if (cloudData.stickyNotes && cloudData.stickyNotes.length) S.stickyNotes = cloudData.stickyNotes;
+    if (cloudData.pomSessions && Object.keys(cloudData.pomSessions).length) S.pomSessions = cloudData.pomSessions;
+    if (cloudData.settings) S.settings = { ...S.settings, ...cloudData.settings };
 
     // Ensure all books have required fields
     if (S.books) {
@@ -2762,10 +2768,13 @@ async function initCloudSync() {
       });
     }
 
-    // Save to localStorage and re-render
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
     init();
-    console.log('Loaded cloud data into local');
+    console.log('Cloud sync complete - loaded ' + cloudCount + ' items');
+  } else {
+    // Local has more data - push to cloud
+    console.log('Local has more data (' + localCount + ' vs ' + cloudCount + '), pushing to cloud');
+    syncToSupabase();
   }
 }
 
