@@ -2747,6 +2747,7 @@ function refreshDailyView() {
 
   // Update intention
   const intentEl = document.getElementById('intention');
+  if (!intentEl) return;
   intentEl.textContent = S.intention[viewDateKey()] || '';
   intentEl.contentEditable = isToday ? 'true' : 'false';
   intentEl.style.cursor = isToday ? 'text' : 'default';
@@ -2867,10 +2868,11 @@ function init() {
   // Daily heading — handled by refreshDailyView
 
   // Monthly heading
-  document.getElementById('monthly-heading').textContent = MONTHS[now.getMonth()];
+  var _mhEl = document.getElementById('monthly-heading'); if (_mhEl) _mhEl.textContent = MONTHS[now.getMonth()];
 
   // Intention
   const intentEl = document.getElementById('intention');
+  if (!intentEl) return;
   intentEl.textContent = S.intention[todayKey()] || '';
   intentEl.addEventListener('input', () => {
     if (viewDayOffset === 0) { S.intention[todayKey()] = intentEl.textContent; }
@@ -3344,12 +3346,13 @@ function renderMonthCal() {
   const realNow = new Date();
   const isThisMonth = (yr === realNow.getFullYear() && mo === realNow.getMonth());
 
-  document.getElementById('month-cal-label').textContent = MONTHS[mo] + ' ' + yr;
-  document.getElementById('monthly-heading').textContent = MONTHS[mo] + (isThisMonth ? '' : ' ' + yr);
+  var mcl = document.getElementById('month-cal-label'); if (mcl) mcl.textContent = MONTHS[mo] + ' ' + yr;
+  var mh = document.getElementById('monthly-heading'); if (mh) mh.textContent = MONTHS[mo] + (isThisMonth ? '' : ' ' + yr);
   const navLabel = document.getElementById('month-nav-label');
   if (navLabel) navLabel.textContent = MONTHS[mo].slice(0,3) + ' ' + yr;
 
   const dayNamesEl = document.getElementById('month-day-names');
+  if (!dayNamesEl) return;
   dayNamesEl.innerHTML = DAYS_SHORT.map(d => `<div class="ms-day-name">${d}</div>`).join('');
   const gridEl = document.getElementById('month-cal-grid');
   const firstDay = new Date(yr, mo, 1).getDay();
