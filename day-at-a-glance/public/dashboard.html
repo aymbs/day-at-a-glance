@@ -2665,6 +2665,108 @@ function load() {
 
 function save() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+  debounceSyncToCloud();
+}
+
+var _cloudSyncTimer = null;
+function debounceSyncToCloud() {
+  clearTimeout(_cloudSyncTimer);
+  _cloudSyncTimer = setTimeout(syncToSupabase, 2000);
+}
+
+async function syncToSupabase() {
+  if (!_supa) return;
+  try {
+    // Sync all data as a single JSON blob in settings table
+    await _supa.from('settings').upsert({
+      id: 1,
+      name: S.settings.name || '',
+      title: S.settings.title || 'Day at a Glance',
+      gcal_connected: !!S.settings.gcalConnected,
+      gcal_token: S.settings.gcalToken || '',
+      gcal_client_id: S.settings.gcalClientId || ''
+    });
+
+    // Store full state as JSON in a simple key-value approach
+    // We'll use the notes table with a special key
+    var stateToSync = {
+      tasks: S.tasks || [],
+      habits: S.habits || [],
+      books: S.books || [],
+      workouts: S.workouts || [],
+      workoutLogs: S.workoutLogs || {},
+      goals: S.goals || [],
+      weeklyPriorities: S.weeklyPriorities || [],
+      notes: S.notes || {},
+      intention: S.intention || {},
+      stickyNotes: S.stickyNotes || [],
+      pomSessions: S.pomSessions || {},
+      settings: S.settings || {}
+    };
+
+    await _supa.from('notes').upsert({
+      date_key: '__full_state__',
+      content: JSON.stringify(stateToSync)
+    });
+
+    console.log('Synced to cloud');
+  } catch(e) {
+    console.error('Cloud sync error:', e);
+  }
+}
+
+async function loadFromCloud() {
+  if (!_supa) return null;
+  try {
+    var { data, error } = await _supa.from('notes').select('content').eq('date_key', '__full_state__').single();
+    if (error || !data) return null;
+    var cloud = JSON.parse(data.content);
+    console.log('Loaded from cloud');
+    return cloud;
+  } catch(e) {
+    console.error('Cloud load error:', e);
+    return null;
+  }
+}
+
+async function initCloudSync() {
+  var cloudData = await loadFromCloud();
+  if (!cloudData) return;
+
+  // Merge cloud data - cloud wins if it has more recent/more data
+  var localStr = JSON.stringify(S);
+  var def = defaultState();
+  var localIsDefault = S.tasks.length === 0 && S.books.length === 0 && Object.keys(S.notes).length === 0;
+
+  if (localIsDefault && (cloudData.tasks.length > 0 || cloudData.books.length > 0)) {
+    // Local is empty, cloud has data - use cloud
+    S.tasks = cloudData.tasks || S.tasks;
+    S.habits = cloudData.habits || S.habits;
+    S.books = cloudData.books || S.books;
+    S.workouts = cloudData.workouts || S.workouts;
+    S.workoutLogs = cloudData.workoutLogs || S.workoutLogs;
+    S.goals = cloudData.goals || S.goals;
+    S.weeklyPriorities = cloudData.weeklyPriorities || S.weeklyPriorities;
+    S.notes = cloudData.notes || S.notes;
+    S.intention = cloudData.intention || S.intention;
+    S.stickyNotes = cloudData.stickyNotes || S.stickyNotes;
+    S.pomSessions = cloudData.pomSessions || S.pomSessions;
+    S.settings = { ...S.settings, ...(cloudData.settings || {}) };
+
+    // Ensure all books have required fields
+    if (S.books) {
+      S.books.forEach(function(b) {
+        if (b.coverId === undefined) b.coverId = null;
+        if (b.isAudiobook === undefined) b.isAudiobook = false;
+        if (b.pctComplete === undefined) b.pctComplete = 0;
+      });
+    }
+
+    // Save to localStorage and re-render
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+    init();
+    console.log('Loaded cloud data into local');
+  }
 }
 
 // ──────────────────────────────────────────
@@ -4928,6 +5030,7 @@ handleOAuthCallback();
 init();
 initPom();
 var _dqEl = document.getElementById("daily-quote"); if (_dqEl) _dqEl.textContent = '"' + getDailyQuote() + '"';
+initCloudSync();
 
 updateStickyCount();
 </script>
