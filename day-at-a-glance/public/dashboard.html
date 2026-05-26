@@ -2735,51 +2735,61 @@ async function loadFromCloud() {
 
 async function initCloudSync() {
   var cloudData = await loadFromCloud();
-  if (!cloudData) return;
+  if (!cloudData) { 
+    // No cloud data - push local up
+    syncToSupabase();
+    return; 
+  }
 
-  // Count how much data each side has
-  var localCount = (S.tasks || []).length + (S.books || []).length + Object.keys(S.notes || {}).length + (S.workouts || []).length;
-  var cloudCount = (cloudData.tasks || []).length + (cloudData.books || []).length + Object.keys(cloudData.notes || {}).length + (cloudData.workouts || []).length;
+  // Only use cloud data if LOCAL is completely fresh/empty
+  // (no tasks, no completed tasks, no notes, no workouts logged)
+  var localHasData = (S.tasks && S.tasks.length > 0) || 
+    Object.keys(S.notes || {}).length > 0 || 
+    (S.workouts && S.workouts.length > 0) ||
+    Object.keys(S.workoutLogs || {}).length > 0;
 
-  if (cloudCount === 0 && localCount > 0) {
-    // Cloud is empty, local has data - push local to cloud instead
-    console.log('Cloud empty, pushing local data up');
+  if (localHasData) {
+    // Local has data - push local to cloud, don't overwrite
+    console.log('Local has data - pushing to cloud');
     syncToSupabase();
     return;
   }
 
-  if (cloudCount >= localCount || localCount === 0) {
-    // Cloud has same or more data - use cloud
-    if (cloudData.tasks && cloudData.tasks.length) S.tasks = cloudData.tasks;
-    if (cloudData.habits && cloudData.habits.length) S.habits = cloudData.habits;
-    if (cloudData.books && cloudData.books.length) S.books = cloudData.books;
-    if (cloudData.workouts) S.workouts = cloudData.workouts;
-    if (cloudData.workoutLogs && Object.keys(cloudData.workoutLogs).length) S.workoutLogs = cloudData.workoutLogs;
-    if (cloudData.goals && cloudData.goals.length) S.goals = cloudData.goals;
-    if (cloudData.weeklyPriorities) S.weeklyPriorities = cloudData.weeklyPriorities;
-    if (cloudData.notes && Object.keys(cloudData.notes).length) S.notes = cloudData.notes;
-    if (cloudData.intention && Object.keys(cloudData.intention).length) S.intention = cloudData.intention;
-    if (cloudData.stickyNotes && cloudData.stickyNotes.length) S.stickyNotes = cloudData.stickyNotes;
-    if (cloudData.pomSessions && Object.keys(cloudData.pomSessions).length) S.pomSessions = cloudData.pomSessions;
-    if (cloudData.settings) S.settings = { ...S.settings, ...cloudData.settings };
+  // Local is empty - pull from cloud
+  var cloudHasData = (cloudData.tasks && cloudData.tasks.length > 0) ||
+    (cloudData.books && cloudData.books.length > 0) ||
+    Object.keys(cloudData.notes || {}).length > 0;
 
-    // Ensure all books have required fields
-    if (S.books) {
-      S.books.forEach(function(b) {
-        if (b.coverId === undefined) b.coverId = null;
-        if (b.isAudiobook === undefined) b.isAudiobook = false;
-        if (b.pctComplete === undefined) b.pctComplete = 0;
-      });
-    }
-
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
-    init();
-    console.log('Cloud sync complete - loaded ' + cloudCount + ' items');
-  } else {
-    // Local has more data - push to cloud
-    console.log('Local has more data (' + localCount + ' vs ' + cloudCount + '), pushing to cloud');
-    syncToSupabase();
+  if (!cloudHasData) {
+    console.log('Both local and cloud empty');
+    return;
   }
+
+  // Apply cloud data
+  S.tasks = cloudData.tasks || [];
+  if (cloudData.habits && cloudData.habits.length) S.habits = cloudData.habits;
+  S.books = cloudData.books || [];
+  S.workouts = cloudData.workouts || [];
+  S.workoutLogs = cloudData.workoutLogs || {};
+  if (cloudData.goals && cloudData.goals.length) S.goals = cloudData.goals;
+  S.weeklyPriorities = cloudData.weeklyPriorities || [];
+  S.notes = cloudData.notes || {};
+  S.intention = cloudData.intention || {};
+  S.stickyNotes = cloudData.stickyNotes || [];
+  S.pomSessions = cloudData.pomSessions || {};
+  if (cloudData.settings) S.settings = { ...S.settings, ...cloudData.settings };
+
+  if (S.books) {
+    S.books.forEach(function(b) {
+      if (b.coverId === undefined) b.coverId = null;
+      if (b.isAudiobook === undefined) b.isAudiobook = false;
+      if (b.pctComplete === undefined) b.pctComplete = 0;
+    });
+  }
+
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+  init();
+  console.log('Pulled cloud data - Tasks:', S.tasks.length, 'Books:', S.books.length);
 }
 
 // ──────────────────────────────────────────
