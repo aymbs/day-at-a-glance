@@ -2072,6 +2072,49 @@
     background: var(--white);
   }
 
+  
+  .sync-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--sage) 0%, var(--sage-mid) 100%);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+    z-index: 900;
+    transition: all 0.2s;
+  }
+  .sync-fab:hover { transform: scale(1.1); }
+  .sync-fab:active { transform: scale(0.95); }
+  .sync-fab.syncing i { animation: spin 1s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .sync-toast {
+    position: fixed;
+    bottom: 74px;
+    right: 16px;
+    background: var(--sage);
+    color: white;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 20px;
+    z-index: 901;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s ease;
+    pointer-events: none;
+  }
+  .sync-toast.show { opacity: 1; transform: translateY(0); }
+
   #main::-webkit-scrollbar { width: 5px; }
   #main::-webkit-scrollbar-track { background: transparent; }
   #main::-webkit-scrollbar-thumb { background: var(--cream-dark); border-radius: 10px; }
@@ -5046,6 +5089,65 @@ function saveWorkoutLog(dk) {
   save();
 }
 
+
+async function manualSync() {
+  var btn = document.getElementById('sync-fab');
+  var toast = document.getElementById('sync-toast');
+  btn.classList.add('syncing');
+
+  try {
+    // First pull from cloud
+    var cloudData = await loadFromCloud();
+    if (cloudData) {
+      var cloudTasks = (cloudData.tasks || []).length;
+      var localTasks = (S.tasks || []).length;
+
+      if (cloudTasks > localTasks) {
+        // Cloud has more - pull down
+        S.tasks = cloudData.tasks || [];
+        if (cloudData.habits && cloudData.habits.length) S.habits = cloudData.habits;
+        S.books = cloudData.books || [];
+        S.workouts = cloudData.workouts || [];
+        S.workoutLogs = cloudData.workoutLogs || {};
+        if (cloudData.goals && cloudData.goals.length) S.goals = cloudData.goals;
+        S.weeklyPriorities = cloudData.weeklyPriorities || [];
+        if (cloudData.notes && Object.keys(cloudData.notes).length) S.notes = cloudData.notes;
+        if (cloudData.intention) S.intention = cloudData.intention;
+        S.stickyNotes = cloudData.stickyNotes || [];
+        S.pomSessions = cloudData.pomSessions || {};
+        if (cloudData.settings) S.settings = { ...S.settings, ...cloudData.settings };
+
+        if (S.books) {
+          S.books.forEach(function(b) {
+            if (b.coverId === undefined) b.coverId = null;
+            if (b.isAudiobook === undefined) b.isAudiobook = false;
+            if (b.pctComplete === undefined) b.pctComplete = 0;
+          });
+        }
+
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+        init();
+        toast.textContent = 'Pulled ' + cloudTasks + ' tasks from cloud';
+      } else {
+        // Local has same or more - push up
+        await syncToSupabase();
+        toast.textContent = 'Pushed ' + localTasks + ' tasks to cloud';
+      }
+    } else {
+      // No cloud data - push local up
+      await syncToSupabase();
+      toast.textContent = 'Pushed to cloud';
+    }
+  } catch(e) {
+    toast.textContent = 'Sync failed';
+    console.error('Manual sync error:', e);
+  }
+
+  btn.classList.remove('syncing');
+  toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 2500);
+}
+
 handleOAuthCallback();
 init();
 initPom();
@@ -5075,5 +5177,7 @@ updateStickyCount();
     </div>
 </div>
 
+<button class="sync-fab" id="sync-fab" onclick="manualSync()" title="Sync data across devices"><i class="ti ti-refresh"></i></button>
+<div class="sync-toast" id="sync-toast">Synced!</div>
 </body>
 </html>
