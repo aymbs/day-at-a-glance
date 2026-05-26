@@ -2678,7 +2678,9 @@ async function syncToSupabase() {
   if (!_supa) return;
   try {
     // Sync all data as a single JSON blob in settings table
-    await _supa.from('settings').upsert({
+    // Settings sync
+    await _supa.from('settings').delete().eq('id', 1);
+    await _supa.from('settings').insert({
       id: 1,
       name: S.settings.name || '',
       title: S.settings.title || 'Day at a Glance',
@@ -2704,7 +2706,9 @@ async function syncToSupabase() {
       settings: S.settings || {}
     };
 
-    await _supa.from('notes').upsert({
+    // Delete then insert to avoid 409 conflict
+    await _supa.from('notes').delete().eq('date_key', '__full_state__');
+    await _supa.from('notes').insert({
       date_key: '__full_state__',
       content: JSON.stringify(stateToSync)
     });
