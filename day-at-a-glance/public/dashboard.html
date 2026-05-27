@@ -3331,25 +3331,30 @@ function deleteReminder(id) {
 function renderHabits() {
   var el = document.getElementById('habit-list');
   if (!S.habits.length) { el.innerHTML = '<div class="empty">No habits yet.</div>'; return; }
-  var tk = todayKey();
-  el.innerHTML = S.habits.map(function(h) {
-    var done = h.history && h.history[tk];
+  var dk = viewDateKey();
+  var isToday = viewDayOffset === 0;
+  var dateLabel = isToday ? '' : '<div style="font-size:11px;color:var(--ink3);font-style:italic;margin-bottom:8px;">Showing habits for ' + dk + '</div>';
+  el.innerHTML = dateLabel + S.habits.map(function(h) {
+    var done = h.history && h.history[dk];
     return '<div class="habit-toggle-row">'
       + '<div class="habit-toggle-label editable-label ' + (done ? 'completed' : '') + '" onclick="inlineEditHabit(' + h.id + ')">' + escHtml(h.label) + '</div>'
-      + '<label class="toggle-switch"><input type="checkbox" ' + (done ? 'checked' : '') + ' onchange="toggleHabitToday(' + h.id + ')" /><div class="toggle-track"></div><div class="toggle-thumb"></div></label>'
+      + '<label class="toggle-switch"><input type="checkbox" ' + (done ? 'checked' : '') + ' onchange="toggleHabitForDate(\'' + dk + '\',' + h.id + ')" /><div class="toggle-track"></div><div class="toggle-thumb"></div></label>'
       + '<button onclick="deleteHabit(' + h.id + ')" class="inline-edit-btn" style="margin-left:6px;"><i class="ti ti-x"></i></button>'
       + '</div>';
   }).join('');
 }
 
 function toggleHabitToday(id) {
+  toggleHabitForDate(todayKey(), id);
+}
+
+function toggleHabitForDate(dateKey, id) {
   var h = S.habits.find(function(x) { return x.id === id; });
   if (!h) return;
   if (!h.history) h.history = {};
-  var tk = todayKey();
-  h.history[tk] = !h.history[tk];
+  h.history[dateKey] = !h.history[dateKey];
   save(); renderHabits();
-  if (h.history[tk]) burstConfetti();
+  if (h.history[dateKey]) burstConfetti();
 }
 
 function toggleHabit(id, key) {
