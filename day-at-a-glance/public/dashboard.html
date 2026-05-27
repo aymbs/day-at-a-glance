@@ -2954,13 +2954,33 @@ function clearExpiredCarriedTasks() {
 
 function carryOverTasks() {
   clearExpiredCarriedTasks();
-  // Only carry over manually added tasks (not preset/habit tasks)
   const todayKey_ = todayKey();
+
+  // Clean up: remove carried copies where the original task is now done
+  S.tasks = S.tasks.filter(function(t) {
+    if (t.carriedFrom && !t.done) {
+      // Find the original task
+      var original = S.tasks.find(function(o) { return o.id === t.carriedFrom; });
+      if (original && original.done) return false; // Original is done, remove this carried copy
+    }
+    return true;
+  });
+
+  // Also remove carried copies where a carried copy with the same label is already done today
+  var doneTodayLabels = S.tasks.filter(function(t) { return t.date === todayKey_ && t.done; }).map(function(t) { return t.label.toLowerCase(); });
+  S.tasks = S.tasks.filter(function(t) {
+    if (t.carriedFrom && !t.done && t.date === todayKey_) {
+      if (doneTodayLabels.indexOf(t.label.toLowerCase()) !== -1) return false;
+    }
+    return true;
+  });
+
+  // Only carry over manually added tasks (not preset/habit tasks)
   const incompletePast = S.tasks.filter(t =>
     !t.done &&
     t.date < todayKey_ &&
-    !t.carriedFrom &&  // not already a carried-over copy
-    !t.preset          // not a preset task (legacy)
+    !t.carriedFrom &&
+    !t.preset
   );
   incompletePast.forEach(oldTask => {
     const alreadyCarried = S.tasks.some(t => t.carriedFrom === oldTask.id && t.date === todayKey_);
@@ -5102,8 +5122,14 @@ async function manualSync() {
       var cloudTasks = (cloudData.tasks || []).length;
       var localTasks = (S.tasks || []).length;
 
-      if (cloudTasks > localTasks) {
-        // Cloud has more - pull down
+      var cloudNotes = Object.keys(cloudData.notes || {}).length;
+      var localNotes = Object.keys(S.notes || {}).length;
+      var cloudIsDifferent = (cloudTasks !== localTasks) || (cloudNotes > localNotes) || 
+        ((cloudData.books || []).length !== (S.books || []).length) ||
+        ((cloudData.workouts || []).length !== (S.workouts || []).length);
+
+      if (cloudIsDifferent) {
+        // Cloud is different - pull down
         S.tasks = cloudData.tasks || [];
         if (cloudData.habits && cloudData.habits.length) S.habits = cloudData.habits;
         S.books = cloudData.books || [];
@@ -5176,8 +5202,17 @@ async function autoPullFromCloud() {
     var localWorkouts = (S.workouts || []).length;
 
     // If cloud is different and has data, pull it
+    var cloudNoteCount = Object.keys(cloudData.notes || {}).length;
+    var localNoteCount = Object.keys(S.notes || {}).length;
+    var cloudIntentionCount = Object.keys(cloudData.intention || {}).length;
+    var localIntentionCount = Object.keys(S.intention || {}).length;
+    var cloudWoLogCount = Object.keys(cloudData.workoutLogs || {}).length;
+    var localWoLogCount = Object.keys(S.workoutLogs || {}).length;
+
     var isDifferent = (cloudTasks !== localTasks) || (cloudDone !== localDone) || 
-      (cloudBooks !== localBooks) || (cloudWorkouts !== localWorkouts);
+      (cloudBooks !== localBooks) || (cloudWorkouts !== localWorkouts) ||
+      (cloudNoteCount !== localNoteCount) || (cloudIntentionCount !== localIntentionCount) ||
+      (cloudWoLogCount !== localWoLogCount);
 
     if (!isDifferent) return;
 
