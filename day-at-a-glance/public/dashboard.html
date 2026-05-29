@@ -2706,22 +2706,11 @@ function load() {
   return defaultState();
 }
 
-var _isSyncingFromCloud = false;
-var _lastSyncTimestamp = 0;
 
 function save() {
-  S._lastModified = Date.now();
   try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
-  if (!_isSyncingFromCloud) debounceSyncToCloud();
+  schedulePush();
 }
-
-var _cloudSyncTimer = null;
-function debounceSyncToCloud() {
-  clearTimeout(_cloudSyncTimer);
-  _cloudSyncTimer = setTimeout(syncToSupabase, 2000);
-}
-
-
 
 // Merge two plain objects (combine all keys, prefer local)
 
@@ -2730,10 +2719,6 @@ function debounceSyncToCloud() {
 
 
 // Merge habits with their history combined
-
-
-
-
 
 
 // ──────────────────────────────────────────
@@ -4041,8 +4026,6 @@ function renderConsistency() {
 }
 
 
-
-
 // ──────────────────────────────────────────
 // UNIVERSAL EDIT MODAL
 // ──────────────────────────────────────────
@@ -4183,8 +4166,6 @@ function editBook(id) {
 function editWpri(id) {
   editWeeklyPri(id);
 }
-
-
 
 // ──────────────────────────────────────────
 // STICKY NOTES
@@ -5024,16 +5005,10 @@ function saveWorkoutLog(dk) {
   save();
 }
 
-
-
-
-
 // Auto-pull from cloud every 30 seconds
 
-
-
 // Start auto-pull every 30 seconds
-setInterval(autoPullFromCloud, 15000);
+
 
 // Auto-sync handles everything
 
@@ -5042,11 +5017,45 @@ setInterval(autoPullFromCloud, 15000);
 // SIMPLE SYNC: Last write wins, always identical
 // ══════════════════════════════════════════
 
-async function pushToCloud() {
-  if (!_supa || _isSyncingFromCloud) return;
+// Auto-pull every 15 seconds
+
+// Alias for save's debounced sync
+
+
+
+
+// ══════════════════════════════════════════════════════
+// CLOUD SYNC - Simple, safe, bidirectional
+// Rule: Last device to make a change wins.
+// Push: 2s after any change. Pull: every 15s on all devices.
+// Safety: NEVER push empty/default data to cloud.
+// ══════════════════════════════════════════════════════
+
+var _syncPushTimer = null;
+var _syncPulling = false;
+var _syncLastPulledAt = 0;
+
+// Called by save() after every change
+function schedulePush() {
+  clearTimeout(_syncPushTimer);
+  _syncPushTimer = setTimeout(cloudPush, 2000);
+}
+
+// Push local state to cloud
+async function cloudPush() {
+  if (!_supa || _syncPulling) return;
+  // Safety: never push if local has no real data
+  var taskCount = (S.tasks || []).length;
+  var noteCount = Object.keys(S.notes || {}).length;
+  var bookCount = (S.books || []).length;
+  var workoutCount = (S.workouts || []).length;
+  var habitHistoryCount = (S.habits || []).reduce(function(sum, h) { return sum + Object.keys(h.history || {}).length; }, 0);
+  if (taskCount === 0 && noteCount === 0 && bookCount === 0 && workoutCount === 0 && habitHistoryCount === 0) {
+    console.log('Sync: nothing to push (no data)');
+    return;
+  }
   try {
-    S._lastModified = Date.now();
-    var payload = JSON.stringify({
+    var payload = {
       tasks: S.tasks || [],
       habits: S.habits || [],
       books: S.books || [],
@@ -5059,85 +5068,126 @@ async function pushToCloud() {
       stickyNotes: S.stickyNotes || [],
       pomSessions: S.pomSessions || {},
       settings: S.settings || {},
-      _lastModified: S._lastModified
-    });
+      _ts: Date.now()
+    };
     await _supa.from('notes').delete().eq('date_key', '__full_state__');
-    await _supa.from('notes').insert({ date_key: '__full_state__', content: payload });
-    _lastSyncTimestamp = S._lastModified;
-    console.log('Pushed to cloud at', new Date(S._lastModified).toLocaleTimeString());
+    await _supa.from('notes').insert({ date_key: '__full_state__', content: JSON.stringify(payload) });
+    _syncLastPulledAt = payload._ts;
+    console.log('Sync pushed: Tasks=' + taskCount + ' Notes=' + noteCount + ' Books=' + bookCount);
   } catch(e) {
-    console.error('Push error:', e);
+    console.error('Sync push error:', e);
   }
 }
 
-async function pullFromCloud() {
-  if (!_supa) return false;
+// Pull cloud state and replace local if cloud is newer
+async function cloudPull() {
+  if (!_supa || _syncPulling) return;
+  _syncPulling = true;
   try {
     var { data, error } = await _supa.from('notes').select('content').eq('date_key', '__full_state__').single();
-    if (error || !data || !data.content) return false;
+    if (error || !data || !data.content) { _syncPulling = false; return; }
     var cloud = JSON.parse(data.content);
-    var cloudTs = cloud._lastModified || 0;
-
-    // Only apply if cloud is newer than what we last synced
-    if (cloudTs <= _lastSyncTimestamp) return false;
-
-    // Cloud is newer - replace local with cloud entirely
-    _isSyncingFromCloud = true;
+    var cloudTs = cloud._ts || 0;
+    // Only apply if cloud is newer than our last pull
+    if (cloudTs <= _syncLastPulledAt) { _syncPulling = false; return; }
+    // Safety: don't replace good local data with empty cloud
+    var cloudTasks = (cloud.tasks || []).length;
+    var cloudNotes = Object.keys(cloud.notes || {}).length;
+    var cloudBooks = (cloud.books || []).length;
+    var localTasks = (S.tasks || []).length;
+    if (cloudTasks === 0 && cloudNotes === 0 && cloudBooks === 0 && localTasks > 0) {
+      console.log('Sync: ignoring empty cloud data');
+      _syncPulling = false;
+      return;
+    }
+    // Apply cloud data
     S.tasks = cloud.tasks || [];
     S.habits = cloud.habits || [];
     S.books = cloud.books || [];
     S.workouts = cloud.workouts || [];
     S.workoutLogs = cloud.workoutLogs || {};
-    S.goals = cloud.goals || [];
+    S.goals = (cloud.goals && cloud.goals.length) ? cloud.goals : S.goals;
     S.weeklyPriorities = cloud.weeklyPriorities || [];
     S.notes = cloud.notes || {};
     S.intention = cloud.intention || {};
     S.stickyNotes = cloud.stickyNotes || [];
     S.pomSessions = cloud.pomSessions || {};
-    S.settings = Object.assign({}, S.settings, cloud.settings || {});
-    S._lastModified = cloudTs;
-
+    if (cloud.settings) S.settings = Object.assign({}, S.settings, cloud.settings);
     // Fix book fields
     (S.books || []).forEach(function(b) {
       if (b.coverId === undefined) b.coverId = null;
       if (b.isAudiobook === undefined) b.isAudiobook = false;
       if (b.pctComplete === undefined) b.pctComplete = 0;
     });
-
+    _syncLastPulledAt = cloudTs;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
-    _lastSyncTimestamp = cloudTs;
-    _isSyncingFromCloud = false;
+    _syncPulling = false;
     init();
-    console.log('Pulled from cloud at', new Date(cloudTs).toLocaleTimeString());
-    return true;
+    console.log('Sync pulled: Tasks=' + S.tasks.length + ' Notes=' + Object.keys(S.notes).length);
   } catch(e) {
-    _isSyncingFromCloud = false;
-    return false;
+    _syncPulling = false;
   }
 }
 
-async function initCloudSync() {
+// On page load: pull from cloud first, then push if cloud was empty
+async function cloudInit() {
   if (!_supa) return;
-  // Try pulling first - if cloud is newer, use it
-  var pulled = await pullFromCloud();
-  if (!pulled) {
-    // Cloud is older or empty - push local up
-    await pushToCloud();
+  try {
+    var { data } = await _supa.from('notes').select('content').eq('date_key', '__full_state__').single();
+    if (data && data.content) {
+      var cloud = JSON.parse(data.content);
+      var cloudTasks = (cloud.tasks || []).length;
+      var cloudBooks = (cloud.books || []).length;
+      var cloudNotes = Object.keys(cloud.notes || {}).length;
+      if (cloudTasks > 0 || cloudBooks > 0 || cloudNotes > 0) {
+        // Cloud has data - use it
+        S.tasks = cloud.tasks || [];
+        S.habits = cloud.habits || [];
+        S.books = cloud.books || [];
+        S.workouts = cloud.workouts || [];
+        S.workoutLogs = cloud.workoutLogs || {};
+        S.goals = (cloud.goals && cloud.goals.length) ? cloud.goals : S.goals;
+        S.weeklyPriorities = cloud.weeklyPriorities || [];
+        S.notes = cloud.notes || {};
+        S.intention = cloud.intention || {};
+        S.stickyNotes = cloud.stickyNotes || [];
+        S.pomSessions = cloud.pomSessions || {};
+        if (cloud.settings) S.settings = Object.assign({}, S.settings, cloud.settings);
+        (S.books || []).forEach(function(b) {
+          if (b.coverId === undefined) b.coverId = null;
+          if (b.isAudiobook === undefined) b.isAudiobook = false;
+          if (b.pctComplete === undefined) b.pctComplete = 0;
+        });
+        _syncLastPulledAt = cloud._ts || Date.now();
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+        init();
+        console.log('Sync init: loaded from cloud - Tasks=' + S.tasks.length);
+        return;
+      }
+    }
+    // Cloud empty or no data - push local if we have any
+    var localTasks = (S.tasks || []).length;
+    if (localTasks > 0) {
+      console.log('Sync init: cloud empty, pushing local');
+      await cloudPush();
+    } else {
+      console.log('Sync init: both empty, starting fresh');
+    }
+  } catch(e) {
+    console.log('Sync init: could not reach cloud');
   }
-  console.log('Initial sync complete');
 }
 
 // Auto-pull every 15 seconds
-setInterval(function() { pullFromCloud(); }, 15000);
+setInterval(cloudPull, 15000);
 
-// Alias for save's debounced sync
-async function syncToSupabase() { await pushToCloud(); }
 
 handleOAuthCallback();
 init();
 initPom();
 var _dqEl = document.getElementById("daily-quote"); if (_dqEl) _dqEl.textContent = '"' + getDailyQuote() + '"';
-initCloudSync();
+cloudInit();
+
 
 updateStickyCount();
 </script>
