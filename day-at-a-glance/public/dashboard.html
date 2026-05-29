@@ -2722,32 +2722,58 @@ function debounceSyncToCloud() {
 async function syncToSupabase() {
   if (!_supa || _isSyncingFromCloud) return;
   try {
-    var stateToSync = {
-      tasks: S.tasks || [],
-      habits: S.habits || [],
-      books: S.books || [],
-      workouts: S.workouts || [],
-      workoutLogs: S.workoutLogs || {},
-      goals: S.goals || [],
-      weeklyPriorities: S.weeklyPriorities || [],
-      notes: S.notes || {},
-      intention: S.intention || {},
-      stickyNotes: S.stickyNotes || [],
-      pomSessions: S.pomSessions || {},
-      settings: S.settings || {}
+    // First, load cloud data so we can merge
+    var cloudData = null;
+    try {
+      var { data } = await _supa.from('notes').select('content').eq('date_key', '__full_state__').single();
+      if (data && data.content) cloudData = JSON.parse(data.content);
+    } catch(e) {}
+
+    // Merge: take the longer array for lists, merge objects for key-value data
+    var merged = {
+      tasks: (S.tasks || []).length >= ((cloudData && cloudData.tasks) || []).length ? (S.tasks || []) : cloudData.tasks,
+      habits: (S.habits || []).length >= ((cloudData && cloudData.habits) || []).length ? (S.habits || []) : cloudData.habits,
+      books: (S.books || []).length >= ((cloudData && cloudData.books) || []).length ? (S.books || []) : cloudData.books,
+      workouts: (S.workouts || []).length >= ((cloudData && cloudData.workouts) || []).length ? (S.workouts || []) : cloudData.workouts,
+      weeklyPriorities: (S.weeklyPriorities || []).length >= ((cloudData && cloudData.weeklyPriorities) || []).length ? (S.weeklyPriorities || []) : cloudData.weeklyPriorities,
+      stickyNotes: (S.stickyNotes || []).length >= ((cloudData && cloudData.stickyNotes) || []).length ? (S.stickyNotes || []) : cloudData.stickyNotes,
+      goals: (S.goals || []).length >= ((cloudData && cloudData.goals) || []).length ? (S.goals || []) : cloudData.goals,
+      // For objects, merge keys from both sides
+      notes: Object.assign({}, (cloudData && cloudData.notes) || {}, S.notes || {}),
+      intention: Object.assign({}, (cloudData && cloudData.intention) || {}, S.intention || {}),
+      workoutLogs: Object.assign({}, (cloudData && cloudData.workoutLogs) || {}, S.workoutLogs || {}),
+      pomSessions: Object.assign({}, (cloudData && cloudData.pomSessions) || {}, S.pomSessions || {}),
+      settings: Object.assign({}, (cloudData && cloudData.settings) || {}, S.settings || {})
     };
 
-    // Only push if we actually have data
-    var hasData = (stateToSync.tasks.length > 0) || (stateToSync.books.length > 0) || 
-      Object.keys(stateToSync.notes).length > 0 || (stateToSync.workouts.length > 0);
+    // Merge habit history too - combine from both sides
+    if (cloudData && cloudData.habits && merged.habits) {
+      merged.habits.forEach(function(h) {
+        var cloudHabit = (cloudData.habits || []).find(function(ch) { return ch.label === h.label; });
+        if (cloudHabit && cloudHabit.history) {
+          h.history = Object.assign({}, cloudHabit.history, h.history || {});
+        }
+      });
+    }
+
+    // Also update local state with merged data
+    S.notes = merged.notes;
+    S.intention = merged.intention;
+    S.workoutLogs = merged.workoutLogs;
+    S.pomSessions = merged.pomSessions;
+    S.habits = merged.habits;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+
+    var hasData = (merged.tasks.length > 0) || (merged.books.length > 0) || 
+      Object.keys(merged.notes).length > 0 || (merged.workouts.length > 0);
     if (!hasData) { console.log('No data to sync'); return; }
 
     await _supa.from('notes').delete().eq('date_key', '__full_state__');
     await _supa.from('notes').insert({
       date_key: '__full_state__',
-      content: JSON.stringify(stateToSync)
+      content: JSON.stringify(merged)
     });
-    console.log('Synced to cloud - Tasks:', stateToSync.tasks.length);
+    console.log('Synced to cloud - Tasks:', merged.tasks.length, 'Notes:', Object.keys(merged.notes).length);
   } catch(e) {
     console.error('Cloud sync error:', e);
   }
