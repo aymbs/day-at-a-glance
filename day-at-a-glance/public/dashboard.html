@@ -5190,12 +5190,34 @@ async function autoPullFromCloud() {
     var { data } = await _supa.from('notes').select('content').eq('date_key', '__full_state__').single();
     if (!data || !data.content) return;
     var cloudData = JSON.parse(data.content);
-    var cloudTs = cloudData._lastModified || 0;
+
+    // Compare cloud vs local to see if anything is different
+    var cloudStr = JSON.stringify({
+      t: (cloudData.tasks||[]).length,
+      td: (cloudData.tasks||[]).filter(function(t){return t.done;}).length,
+      b: (cloudData.books||[]).length,
+      w: (cloudData.workouts||[]).length,
+      n: Object.keys(cloudData.notes||{}).join(','),
+      i: Object.keys(cloudData.intention||{}).join(','),
+      wl: Object.keys(cloudData.workoutLogs||{}).join(','),
+      h: (cloudData.habits||[]).map(function(h){return Object.keys(h.history||{}).length;}).join(',')
+    });
     
-    // Only pull if cloud is newer than our last sync
-    if (cloudTs <= _lastSyncTimestamp) return;
-    
+    var localStr = JSON.stringify({
+      t: (S.tasks||[]).length,
+      td: (S.tasks||[]).filter(function(t){return t.done;}).length,
+      b: (S.books||[]).length,
+      w: (S.workouts||[]).length,
+      n: Object.keys(S.notes||{}).join(','),
+      i: Object.keys(S.intention||{}).join(','),
+      wl: Object.keys(S.workoutLogs||{}).join(','),
+      h: (S.habits||[]).map(function(h){return Object.keys(h.history||{}).length;}).join(',')
+    });
+
+    if (cloudStr === localStr) return; // Nothing changed
+
     _isSyncingFromCloud = true;
+
     // Merge cloud into local
     S.tasks = mergeArraysById(S.tasks || [], cloudData.tasks || []);
     S.habits = mergeHabits(S.habits || [], cloudData.habits || []);
@@ -5218,11 +5240,10 @@ async function autoPullFromCloud() {
       });
     }
 
-    _lastSyncTimestamp = cloudTs;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
     _isSyncingFromCloud = false;
     init();
-    console.log('Auto-pulled and merged from cloud');
+    console.log('Auto-synced from cloud');
   } catch(e) {
     _isSyncingFromCloud = false;
   }
@@ -5231,14 +5252,7 @@ async function autoPullFromCloud() {
 // Start auto-pull every 30 seconds
 setInterval(autoPullFromCloud, 15000);
 
-// Set initial hash so we don't re-pull on first check
-(async function() {
-  try {
-    if (!_supa) return;
-    var { data } = await _supa.from('notes').select('content').eq('date_key', '__full_state__').single();
-    if (data && data.content) _lastCloudHash = data.content.length + '_' + data.content.slice(0, 50);
-  } catch(e) {}
-})();
+// Auto-sync handles everything
 
 handleOAuthCallback();
 init();
