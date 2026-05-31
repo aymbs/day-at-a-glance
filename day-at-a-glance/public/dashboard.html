@@ -2845,34 +2845,45 @@ function carryOverTasks() {
   clearExpiredCarriedTasks();
   var todayKey_ = todayKey();
 
-  // Step 1: Find all completed task labels (across all dates)
+  // Build a set of completed task labels (any date, any copy)
   var completedLabels = {};
   S.tasks.forEach(function(t) {
-    if (t.done) completedLabels[t.label.toLowerCase()] = true;
+    if (t.done) completedLabels[t.label.toLowerCase().trim()] = true;
   });
 
-  // Step 2: Remove any carried-over copies where:
-  // - The original task is done, OR
-  // - Any task with the same label is done, OR
-  // - The carried copy itself is done on a previous day
+  // Remove ALL incomplete carried copies of tasks that have been completed anywhere
+  var beforeCount = S.tasks.length;
   S.tasks = S.tasks.filter(function(t) {
-    // Keep all non-carried tasks
+    // Keep non-carried tasks
     if (!t.carriedFrom) return true;
-    // If this carried copy is done, keep it (it's completed)
+    // Keep if this carried copy is itself done
     if (t.done) return true;
-    // If any version of this task is completed, remove this incomplete carried copy
-    if (completedLabels[t.label.toLowerCase()]) return false;
-    // Keep it
+    // Remove if any version of this task label is completed
+    if (completedLabels[t.label.toLowerCase().trim()]) return false;
     return true;
   });
 
-  // Step 3: Carry over incomplete tasks from past days
+  // Also remove old incomplete tasks (not carried) that have been completed via a carried copy
+  S.tasks = S.tasks.filter(function(t) {
+    if (t.done) return true; // keep all done tasks
+    if (t.carriedFrom) return true; // already handled above
+    if (t.date >= todayKey_) return true; // keep today and future
+    // This is an old incomplete task - check if any copy was completed
+    if (completedLabels[t.label.toLowerCase().trim()]) return false;
+    return true;
+  });
+
+  if (S.tasks.length !== beforeCount) {
+    console.log('Cleaned up ' + (beforeCount - S.tasks.length) + ' completed carried tasks');
+  }
+
+  // Carry forward only truly incomplete tasks
   var incompletePast = S.tasks.filter(function(t) {
     return !t.done && 
       t.date < todayKey_ && 
       !t.carriedFrom && 
       !t.preset &&
-      !completedLabels[t.label.toLowerCase()]; // Don't carry if already completed anywhere
+      !completedLabels[t.label.toLowerCase().trim()];
   });
 
   incompletePast.forEach(function(oldTask) {
@@ -3124,14 +3135,14 @@ function onTaskDragEnd(e) {
 
 function deleteTask(id) {
   S.tasks = S.tasks.filter(t => t.id !== id);
-  save(); renderTasks(); updateStats();
+  save(); pushNow(); renderTasks(); updateStats();
 }
 
 function toggleTask(id) {
   const t = S.tasks.find(t => t.id === id);
   if (!t) return;
   t.done = !t.done;
-  save(); renderTasks(); updateStats();
+  save(); pushNow(); renderTasks(); updateStats();
   if (t.done) burstConfetti();
 }
 
@@ -3819,7 +3830,15 @@ function exportData() {
 function clearData() {
   if (confirm('This will permanently delete all your tasks, notes, goals, and settings. Are you sure?')) {
     localStorage.removeItem(STORE_KEY);
-    location.reload();
+    // Also wipe cloud data
+    if (_supa) {
+      _supa.from('notes').delete().eq('date_key', '__full_state__').then(function() {
+        console.log('Cloud data cleared');
+        location.reload();
+      });
+    } else {
+      location.reload();
+    }
   }
 }
 
@@ -5039,6 +5058,11 @@ var _syncLastPulledAt = 0;
 function schedulePush() {
   clearTimeout(_syncPushTimer);
   _syncPushTimer = setTimeout(cloudPush, 2000);
+}
+
+function pushNow() {
+  clearTimeout(_syncPushTimer);
+  cloudPush();
 }
 
 // Push local state to cloud
