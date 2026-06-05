@@ -2941,7 +2941,56 @@ function greeting() {
 // ──────────────────────────────────────────
 // INIT
 // ──────────────────────────────────────────
+
+// Permanently deleted task labels - these can never come back
+var DELETED_TASK_BLACKLIST = [
+  'confirm dylan start time wednesday',
+  'send tech week schedule to abby/laray',
+  'email zero',
+  'update job tracker',
+  'clear linkedin saves',
+  'open newbury app out',
+  'pull list of event sponsors, make a list for week',
+  'get golf day on the books',
+  'invite javonty to wednesday & blck vc',
+  'memory card for camera',
+  'email gucci photos of glasses',
+  'send update to bmo',
+  'schedule linkedin blast for event tomorrow',
+  'complete juliet pitch comp scoring',
+  'follow up with summit dinners - orly',
+  'student loan forbearance form',
+  'get wine for wednesday',
+  'check to see if desktop is working',
+  'loud',
+  'update photos in drive',
+  'send email to bmo',
+  'clear linkedin messages',
+  'send partiful blast to thank evryone',
+  'list to partiful',
+  'student loan forgiveness',
+  'vcu scheduling sessions',
+  'post on linkedin on monday with five findings from tech week',
+  'confirm dylan start time'
+];
+
+function purgeBlacklistedTasks() {
+  if (!S.tasks || !S.tasks.length) return;
+  var before = S.tasks.length;
+  S.tasks = S.tasks.filter(function(t) {
+    var lbl = t.label.toLowerCase().trim();
+    if (DELETED_TASK_BLACKLIST.indexOf(lbl) !== -1) return false;
+    if (S._deletedLabels && S._deletedLabels.indexOf(lbl) !== -1) return false;
+    return true;
+  });
+  if (S.tasks.length !== before) {
+    console.log('Purged ' + (before - S.tasks.length) + ' blacklisted tasks');
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+  }
+}
+
 function init() {
+  purgeBlacklistedTasks();
   // Ensure all books have required fields
   if (S.books) {
     S.books.forEach(function(b) {
@@ -3135,20 +3184,19 @@ function onTaskDragEnd(e) {
 }
 
 function deleteTask(id) {
-  // Find the task being deleted
   var task = S.tasks.find(function(t) { return t.id === id; });
   if (!task) return;
   var label = task.label.toLowerCase().trim();
   
+  // Add to user's personal blacklist so it never comes back via sync
+  if (!S._deletedLabels) S._deletedLabels = [];
+  if (S._deletedLabels.indexOf(label) === -1) S._deletedLabels.push(label);
+  
   // Remove this task, its original, AND all copies with the same label
   S.tasks = S.tasks.filter(function(t) {
-    // Remove the task itself
     if (t.id === id) return false;
-    // If deleting a carried copy, also remove the original
     if (task.carriedFrom && t.id === task.carriedFrom) return false;
-    // Remove all other carried copies of the same label
     if (t.carriedFrom && t.label.toLowerCase().trim() === label && !t.done) return false;
-    // Remove the original if deleting from today
     if (!task.carriedFrom && t.carriedFrom && t.label.toLowerCase().trim() === label && !t.done) return false;
     return true;
   });
@@ -5180,6 +5228,7 @@ async function cloudPull() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
     _syncPulling = false;
     init();
+    purgeBlacklistedTasks();
     console.log('Sync pulled from cloud - Tasks=' + S.tasks.length);
   } catch(e) {
     _syncPulling = false;
@@ -5245,6 +5294,7 @@ async function cloudInit() {
       _syncLastPulledAt = cloudTs;
       try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
       init();
+      purgeBlacklistedTasks();
       console.log('Sync init: loaded from cloud - Tasks=' + S.tasks.length);
     }
   } catch(e) {
