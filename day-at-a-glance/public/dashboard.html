@@ -2708,6 +2708,7 @@ function load() {
 
 
 function save() {
+  S._ts = Date.now();
   try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
   schedulePush();
 }
@@ -3134,17 +3135,49 @@ function onTaskDragEnd(e) {
 }
 
 function deleteTask(id) {
-  S.tasks = S.tasks.filter(t => t.id !== id);
+  // Find the task being deleted
+  var task = S.tasks.find(function(t) { return t.id === id; });
+  if (!task) return;
+  var label = task.label.toLowerCase().trim();
+  
+  // Remove this task, its original, AND all copies with the same label
+  S.tasks = S.tasks.filter(function(t) {
+    // Remove the task itself
+    if (t.id === id) return false;
+    // If deleting a carried copy, also remove the original
+    if (task.carriedFrom && t.id === task.carriedFrom) return false;
+    // Remove all other carried copies of the same label
+    if (t.carriedFrom && t.label.toLowerCase().trim() === label && !t.done) return false;
+    // Remove the original if deleting from today
+    if (!task.carriedFrom && t.carriedFrom && t.label.toLowerCase().trim() === label && !t.done) return false;
+    return true;
+  });
   save(); pushNow(); renderTasks(); updateStats();
 }
 
 function toggleTask(id) {
-  const t = S.tasks.find(t => t.id === id);
+  const t = S.tasks.find(x => x.id === id);
   if (!t) return;
   t.done = !t.done;
+  
+  if (t.done) {
+    var label = t.label.toLowerCase().trim();
+    // If completing a carried copy, also mark the original as done
+    if (t.carriedFrom) {
+      var orig = S.tasks.find(function(o) { return o.id === t.carriedFrom; });
+      if (orig) orig.done = true;
+    }
+    // Mark all other incomplete carried copies of this label as done
+    S.tasks.forEach(function(other) {
+      if (other.id !== id && other.label.toLowerCase().trim() === label && !other.done) {
+        other.done = true;
+      }
+    });
+    burstConfetti();
+  }
   save(); pushNow(); renderTasks(); updateStats();
-  if (t.done) burstConfetti();
 }
+
 
 function burstConfetti() {
   var colors = ['#1a4a35','#2d6e52','#5a9e7a','#e07090','#f2a8b8','#c8a84a','#e0c060','#c04070'];
@@ -5112,18 +5145,16 @@ async function cloudPull() {
     if (error || !data || !data.content) { _syncPulling = false; return; }
     var cloud = JSON.parse(data.content);
     var cloudTs = cloud._ts || 0;
-    // Only apply if cloud is newer than our last pull
-    if (cloudTs <= _syncLastPulledAt) { _syncPulling = false; return; }
-    // Safety: don't replace good local data with empty cloud
+    var localTs = S._ts || 0;
+
+    // Only pull if cloud is NEWER than local
+    if (cloudTs <= localTs) { _syncPulling = false; return; }
+
+    // Don't replace good local data with empty cloud
     var cloudTasks = (cloud.tasks || []).length;
-    var cloudNotes = Object.keys(cloud.notes || {}).length;
-    var cloudBooks = (cloud.books || []).length;
     var localTasks = (S.tasks || []).length;
-    if (cloudTasks === 0 && cloudNotes === 0 && cloudBooks === 0 && localTasks > 0) {
-      console.log('Sync: ignoring empty cloud data');
-      _syncPulling = false;
-      return;
-    }
+    if (cloudTasks === 0 && localTasks > 0) { _syncPulling = false; return; }
+
     // Apply cloud data
     S.tasks = cloud.tasks || [];
     S.habits = cloud.habits || [];
@@ -5137,17 +5168,19 @@ async function cloudPull() {
     S.stickyNotes = cloud.stickyNotes || [];
     S.pomSessions = cloud.pomSessions || {};
     if (cloud.settings) S.settings = Object.assign({}, S.settings, cloud.settings);
-    // Fix book fields
+    S._ts = cloudTs;
+
     (S.books || []).forEach(function(b) {
       if (b.coverId === undefined) b.coverId = null;
       if (b.isAudiobook === undefined) b.isAudiobook = false;
       if (b.pctComplete === undefined) b.pctComplete = 0;
     });
+
     _syncLastPulledAt = cloudTs;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
     _syncPulling = false;
     init();
-    console.log('Sync pulled: Tasks=' + S.tasks.length + ' Notes=' + Object.keys(S.notes).length);
+    console.log('Sync pulled from cloud - Tasks=' + S.tasks.length);
   } catch(e) {
     _syncPulling = false;
   }
@@ -5158,47 +5191,64 @@ async function cloudInit() {
   if (!_supa) return;
   try {
     var { data } = await _supa.from('notes').select('content').eq('date_key', '__full_state__').single();
-    if (data && data.content) {
-      var cloud = JSON.parse(data.content);
-      var cloudTasks = (cloud.tasks || []).length;
-      var cloudBooks = (cloud.books || []).length;
-      var cloudNotes = Object.keys(cloud.notes || {}).length;
-      if (cloudTasks > 0 || cloudBooks > 0 || cloudNotes > 0) {
-        // Cloud has data - use it
-        S.tasks = cloud.tasks || [];
-        S.habits = cloud.habits || [];
-        S.books = cloud.books || [];
-        S.workouts = cloud.workouts || [];
-        S.workoutLogs = cloud.workoutLogs || {};
-        S.goals = (cloud.goals && cloud.goals.length) ? cloud.goals : S.goals;
-        S.weeklyPriorities = cloud.weeklyPriorities || [];
-        S.notes = cloud.notes || {};
-        S.intention = cloud.intention || {};
-        S.stickyNotes = cloud.stickyNotes || [];
-        S.pomSessions = cloud.pomSessions || {};
-        if (cloud.settings) S.settings = Object.assign({}, S.settings, cloud.settings);
-        (S.books || []).forEach(function(b) {
-          if (b.coverId === undefined) b.coverId = null;
-          if (b.isAudiobook === undefined) b.isAudiobook = false;
-          if (b.pctComplete === undefined) b.pctComplete = 0;
-        });
-        _syncLastPulledAt = cloud._ts || Date.now();
-        try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
-        init();
-        console.log('Sync init: loaded from cloud - Tasks=' + S.tasks.length);
-        return;
+    if (!data || !data.content) {
+      // Cloud empty - push local if we have data
+      if ((S.tasks || []).length > 0) {
+        console.log('Sync init: cloud empty, pushing local');
+        await cloudPush();
       }
+      return;
     }
-    // Cloud empty or no data - push local if we have any
-    var localTasks = (S.tasks || []).length;
-    if (localTasks > 0) {
-      console.log('Sync init: cloud empty, pushing local');
+    var cloud = JSON.parse(data.content);
+    var cloudTs = cloud._ts || 0;
+    var localTs = S._ts || 0;
+
+    // If local is newer than cloud, push local up (don't overwrite)
+    if (localTs > cloudTs) {
+      console.log('Sync init: local is newer, pushing to cloud');
       await cloudPush();
-    } else {
-      console.log('Sync init: both empty, starting fresh');
+      return;
+    }
+
+    // Cloud is newer - check it has real data
+    var cloudTasks = (cloud.tasks || []).length;
+    var cloudBooks = (cloud.books || []).length;
+    var cloudNotes = Object.keys(cloud.notes || {}).length;
+    var localTasks = (S.tasks || []).length;
+
+    // Don't overwrite local data with empty cloud
+    if (cloudTasks === 0 && cloudBooks === 0 && cloudNotes === 0 && localTasks > 0) {
+      console.log('Sync init: cloud empty, keeping local');
+      await cloudPush();
+      return;
+    }
+
+    if (cloudTasks > 0 || cloudBooks > 0 || cloudNotes > 0) {
+      S.tasks = cloud.tasks || [];
+      S.habits = cloud.habits || [];
+      S.books = cloud.books || [];
+      S.workouts = cloud.workouts || [];
+      S.workoutLogs = cloud.workoutLogs || {};
+      S.goals = (cloud.goals && cloud.goals.length) ? cloud.goals : S.goals;
+      S.weeklyPriorities = cloud.weeklyPriorities || [];
+      S.notes = cloud.notes || {};
+      S.intention = cloud.intention || {};
+      S.stickyNotes = cloud.stickyNotes || [];
+      S.pomSessions = cloud.pomSessions || {};
+      if (cloud.settings) S.settings = Object.assign({}, S.settings, cloud.settings);
+      S._ts = cloudTs;
+      (S.books || []).forEach(function(b) {
+        if (b.coverId === undefined) b.coverId = null;
+        if (b.isAudiobook === undefined) b.isAudiobook = false;
+        if (b.pctComplete === undefined) b.pctComplete = 0;
+      });
+      _syncLastPulledAt = cloudTs;
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+      init();
+      console.log('Sync init: loaded from cloud - Tasks=' + S.tasks.length);
     }
   } catch(e) {
-    console.log('Sync init: could not reach cloud');
+    console.log('Sync init: error -', e.message);
   }
 }
 
