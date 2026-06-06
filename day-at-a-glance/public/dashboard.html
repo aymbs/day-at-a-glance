@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>My Dashboard</title>
+<title>POV: a vc baddie's life</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -2176,7 +2176,7 @@
 <nav id="sidebar" role="navigation" aria-label="Dashboard navigation">
   <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="ti ti-chevrons-left"></i><i class="ti ti-chevrons-right"></i></button>
   <div class="sidebar-brand">
-    <div class="brand-name" id="sidebar-name">My Dashboard</div>
+    <div class="brand-name" id="sidebar-name">POV: a vc baddie's life</div>
     <div class="brand-date" id="sidebar-date">—</div>
   </div>
 
@@ -2535,7 +2535,7 @@
           </div>
           <div class="settings-row">
             <div><div class="settings-label">Dashboard title</div><div class="settings-sub">Shown in the sidebar</div></div>
-            <input class="settings-input" id="set-title" placeholder="My Dashboard" />
+            <input class="settings-input" id="set-title" placeholder="POV: a vc baddie's life" />
           </div>
           <button class="save-settings-btn" onclick="saveSettings()">Save settings</button>
         </div>
@@ -2638,7 +2638,7 @@ const STORE_KEY = 'day_at_a_glance_aymbre';
 function defaultState() {
   const today = todayKey();
   return {
-    settings: { name: '', title: 'My Dashboard', gcalToken: '', gcalConnected: false },
+    settings: { name: 'Aymbré', title: 'POV: a vc baddie\'s life', gcalToken: '', gcalConnected: false },
     tasks: [],
     reminders: [
       { id: 1, time: '08:00', text: 'Morning intention check-in' },
@@ -3004,7 +3004,7 @@ function init() {
   // Sidebar
   document.getElementById('sidebar-date').textContent =
     DAYS_SHORT[now.getDay()] + ' · ' + MONTHS[now.getMonth()].slice(0,3) + ' ' + now.getDate();
-  document.getElementById('sidebar-name').textContent = S.settings.title || 'My Dashboard';
+  document.getElementById('sidebar-name').textContent = S.settings.title || 'POV: a vc baddie\'s life';
 
   // Daily heading — handled by refreshDailyView
 
@@ -3892,8 +3892,9 @@ function updateGcalStatus() {
 // ──────────────────────────────────────────
 function saveSettings() {
   S.settings.name = document.getElementById('set-name').value.trim();
-  S.settings.title = document.getElementById('set-title').value.trim() || 'My Dashboard';
-  save();
+  S.settings.title = document.getElementById('set-title').value.trim() || 'POV: a vc baddie\'s life';
+  console.log('Saved name:', S.settings.name, 'title:', S.settings.title);
+  save(); pushNow();
   document.getElementById('sidebar-name').textContent = S.settings.title;
   const name = S.settings.name ? (', ' + S.settings.name) : '';
   document.getElementById('daily-heading').textContent = greeting() + name + '.';
@@ -5215,7 +5216,14 @@ async function cloudPull() {
     S.intention = cloud.intention || {};
     S.stickyNotes = cloud.stickyNotes || [];
     S.pomSessions = cloud.pomSessions || {};
-    if (cloud.settings) S.settings = Object.assign({}, S.settings, cloud.settings);
+    if (cloud.settings) {
+      var localName = S.settings.name;
+      var localTitle = S.settings.title;
+      S.settings = Object.assign({}, S.settings, cloud.settings);
+      // Never overwrite a set name/title with empty
+      if (localName && !S.settings.name) S.settings.name = localName;
+      if (localTitle && localTitle !== 'POV: a vc baddie\'s life' && (!S.settings.title || S.settings.title === 'POV: a vc baddie\'s life')) S.settings.title = localTitle;
+    }
     S._ts = cloudTs;
 
     (S.books || []).forEach(function(b) {
@@ -5284,7 +5292,14 @@ async function cloudInit() {
       S.intention = cloud.intention || {};
       S.stickyNotes = cloud.stickyNotes || [];
       S.pomSessions = cloud.pomSessions || {};
-      if (cloud.settings) S.settings = Object.assign({}, S.settings, cloud.settings);
+      if (cloud.settings) {
+      var localName = S.settings.name;
+      var localTitle = S.settings.title;
+      S.settings = Object.assign({}, S.settings, cloud.settings);
+      // Never overwrite a set name/title with empty
+      if (localName && !S.settings.name) S.settings.name = localName;
+      if (localTitle && localTitle !== 'POV: a vc baddie\'s life' && (!S.settings.title || S.settings.title === 'POV: a vc baddie\'s life')) S.settings.title = localTitle;
+    }
       S._ts = cloudTs;
       (S.books || []).forEach(function(b) {
         if (b.coverId === undefined) b.coverId = null;
