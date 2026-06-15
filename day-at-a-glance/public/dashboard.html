@@ -2115,6 +2115,90 @@
   }
   .sync-toast.show { opacity: 1; transform: translateY(0); }
 
+  
+  /* Book update modal */
+  .book-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,46,30,0.45);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+  .book-modal-overlay.open { display: flex; }
+  .book-modal {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: bookModalIn 0.2s ease;
+  }
+  @keyframes bookModalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .book-modal-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--ink);
+    margin-bottom: 4px;
+    font-style: italic;
+  }
+  .book-modal-author {
+    font-size: 13px;
+    color: var(--ink3);
+    margin-bottom: 20px;
+  }
+  .book-modal-field {
+    margin-bottom: 16px;
+  }
+  .book-modal-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink3);
+    margin-bottom: 6px;
+  }
+  .book-modal-input {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 15px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--cream-dark);
+    border-radius: 10px;
+    color: var(--ink);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+  }
+  .book-modal-input:focus { border-color: var(--gold); }
+  .book-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .book-modal-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+  .book-modal-btn.primary { background: var(--sage); color: white; }
+  .book-modal-btn.primary:hover { background: var(--sage-mid); }
+  .book-modal-btn.secondary { background: var(--cream); color: var(--ink2); }
+  .book-modal-btn.secondary:hover { background: var(--cream-dark); }
+
   #main::-webkit-scrollbar { width: 5px; }
   #main::-webkit-scrollbar-track { background: transparent; }
   #main::-webkit-scrollbar-thumb { background: var(--cream-dark); border-radius: 10px; }
@@ -4898,23 +4982,57 @@ function toggleAudiobook(id) {
 function updateAudiobookPct(id) {
   var b = S.books.find(function(b) { return b.id === id; });
   if (!b) return;
-  var val = prompt('Percentage complete for "' + b.title + '" (0-100):', b.pctComplete || 0);
-  if (val === null) return;
-  var pct = parseInt(val);
-  if (!isNaN(pct) && pct >= 0 && pct <= 100) {
-    b.pctComplete = pct;
-    if (pct === 100) b.finished = true;
-    save(); renderBooks();
-  }
+  _bookModalId = id;
+  document.getElementById('book-modal-title').textContent = b.title;
+  document.getElementById('book-modal-author').textContent = b.author || '';
+  document.getElementById('book-modal-current-field').style.display = 'none';
+  document.getElementById('book-modal-total-field').style.display = 'none';
+  document.getElementById('book-modal-pct-field').style.display = 'block';
+  document.getElementById('book-modal-pct').value = b.pctComplete || 0;
+  document.getElementById('book-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('book-modal-pct').focus(); }, 100);
 }
 
+var _bookModalId = null;
+
 function updateBookPages(id) {
-  const b = S.books.find(b => b.id === id);
+  var b = S.books.find(function(b) { return b.id === id; });
   if (!b) return;
-  const val = prompt('Current page for "' + b.title + '" (of ' + b.totalPages + '):', b.currentPage);
-  if (val === null) return;
-  const page = parseInt(val);
-  if (!isNaN(page) && page >= 0) { b.currentPage = Math.min(page, b.totalPages||page); save(); renderBooks(); }
+  _bookModalId = id;
+  document.getElementById('book-modal-title').textContent = b.title;
+  document.getElementById('book-modal-author').textContent = b.author || '';
+  document.getElementById('book-modal-current-field').style.display = 'block';
+  document.getElementById('book-modal-total-field').style.display = 'block';
+  document.getElementById('book-modal-pct-field').style.display = 'none';
+  document.getElementById('book-modal-current').value = b.currentPage || 0;
+  document.getElementById('book-modal-total').value = b.totalPages || '';
+  document.getElementById('book-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('book-modal-total').focus(); }, 100);
+}
+
+function closeBookModal() {
+  document.getElementById('book-modal').classList.remove('open');
+  _bookModalId = null;
+}
+
+function saveBookModal() {
+  var b = S.books.find(function(b) { return b.id === _bookModalId; });
+  if (!b) { closeBookModal(); return; }
+
+  if (b.isAudiobook) {
+    var pct = parseInt(document.getElementById('book-modal-pct').value);
+    if (!isNaN(pct) && pct >= 0 && pct <= 100) {
+      b.pctComplete = pct;
+      if (pct === 100) b.finished = true;
+    }
+  } else {
+    var total = parseInt(document.getElementById('book-modal-total').value);
+    var current = parseInt(document.getElementById('book-modal-current').value);
+    if (!isNaN(total) && total > 0) b.totalPages = total;
+    if (!isNaN(current) && current >= 0) b.currentPage = Math.min(current, b.totalPages || current);
+  }
+  save(); renderBooks();
+  closeBookModal();
 }
 
 function markBookFinished(id) {
@@ -5352,5 +5470,27 @@ updateStickyCount();
 
 
 <div class="sync-toast" id="sync-toast">Synced!</div>
+<div class="book-modal-overlay" id="book-modal" onclick="if(event.target===this)closeBookModal()">
+  <div class="book-modal">
+    <div class="book-modal-title" id="book-modal-title">Book Title</div>
+    <div class="book-modal-author" id="book-modal-author">Author</div>
+    <div class="book-modal-field" id="book-modal-current-field">
+      <label class="book-modal-label">Current page</label>
+      <input type="number" class="book-modal-input" id="book-modal-current" min="0" placeholder="0" />
+    </div>
+    <div class="book-modal-field" id="book-modal-total-field">
+      <label class="book-modal-label">Total pages</label>
+      <input type="number" class="book-modal-input" id="book-modal-total" min="1" placeholder="e.g. 320" />
+    </div>
+    <div class="book-modal-field" id="book-modal-pct-field" style="display:none;">
+      <label class="book-modal-label">Percent complete</label>
+      <input type="number" class="book-modal-input" id="book-modal-pct" min="0" max="100" placeholder="0-100" />
+    </div>
+    <div class="book-modal-actions">
+      <button class="book-modal-btn secondary" onclick="closeBookModal()">Cancel</button>
+      <button class="book-modal-btn primary" onclick="saveBookModal()">Save</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
