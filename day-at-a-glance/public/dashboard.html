@@ -607,12 +607,61 @@
     background: transparent;
     border: none;
     outline: none;
-    resize: vertical;
     line-height: 1.7;
     padding: 0;
   }
 
-  .notes-area::placeholder { color: var(--ink3); }
+  .notes-area:empty::before {
+    content: attr(data-placeholder);
+    color: var(--ink3);
+    pointer-events: none;
+  }
+
+  .notes-area ul, .notes-area ol { padding-left: 24px; margin: 6px 0; }
+  .notes-area li { margin: 2px 0; }
+  .notes-area h3 {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 10px 0 4px;
+  }
+  .notes-area b, .notes-area strong { font-weight: 600; }
+
+  .notes-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--cream-mid);
+  }
+
+  .notes-tool {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--ink3);
+    border-radius: var(--r-sm);
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+
+  .notes-tool:hover { background: var(--cream-mid); color: var(--ink); }
+  .notes-tool.active { background: var(--sage-soft); color: var(--sage-mid); }
+
+  .notes-tool-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--cream-mid);
+    margin: 0 6px;
+  }
 
   .notes-date-label {
     font-size: 11px;
@@ -2549,8 +2598,23 @@
     </div>
     <div class="card">
       <div class="card-body">
-        <div class="notes-date-label" id="notes-date-label">—</div>
-        <textarea class="notes-area" id="notes-area" placeholder="Write anything — thoughts, reflections, plans, gratitude…" oninput="saveNotes()"></textarea>
+        <div class="notes-date-label" id="notes-date-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span id="notes-date-text">—</span>
+          <button id="notes-back-btn" onclick="backToTodayNote()" style="display:none;font-family:var(--font-body);font-size:12px;padding:3px 10px;background:transparent;border:1px solid var(--cream-dark);color:var(--ink2);border-radius:var(--r-sm);cursor:pointer;">← Back to today</button>
+        </div>
+        <div class="notes-toolbar" id="notes-toolbar">
+          <button class="notes-tool" data-cmd="bold" onmousedown="event.preventDefault()" onclick="noteCmd('bold')" title="Bold (Ctrl+B)"><i class="ti ti-bold" aria-hidden="true"></i></button>
+          <button class="notes-tool" data-cmd="italic" onmousedown="event.preventDefault()" onclick="noteCmd('italic')" title="Italic (Ctrl+I)"><i class="ti ti-italic" aria-hidden="true"></i></button>
+          <button class="notes-tool" data-cmd="underline" onmousedown="event.preventDefault()" onclick="noteCmd('underline')" title="Underline (Ctrl+U)"><i class="ti ti-underline" aria-hidden="true"></i></button>
+          <button class="notes-tool" data-cmd="strikeThrough" onmousedown="event.preventDefault()" onclick="noteCmd('strikeThrough')" title="Strikethrough"><i class="ti ti-strikethrough" aria-hidden="true"></i></button>
+          <div class="notes-tool-sep"></div>
+          <button class="notes-tool" id="notes-tool-heading" onmousedown="event.preventDefault()" onclick="noteHeading()" title="Heading"><i class="ti ti-heading" aria-hidden="true"></i></button>
+          <button class="notes-tool" data-cmd="insertUnorderedList" onmousedown="event.preventDefault()" onclick="noteCmd('insertUnorderedList')" title="Bulleted list"><i class="ti ti-list" aria-hidden="true"></i></button>
+          <button class="notes-tool" data-cmd="insertOrderedList" onmousedown="event.preventDefault()" onclick="noteCmd('insertOrderedList')" title="Numbered list"><i class="ti ti-list-numbers" aria-hidden="true"></i></button>
+          <div class="notes-tool-sep"></div>
+          <button class="notes-tool" onmousedown="event.preventDefault()" onclick="noteCmd('removeFormat')" title="Clear formatting"><i class="ti ti-clear-formatting" aria-hidden="true"></i></button>
+        </div>
+        <div class="notes-area" id="notes-area" contenteditable="true" data-placeholder="Write anything — thoughts, reflections, plans, gratitude…" oninput="saveNotes()" onkeyup="updateNoteToolbar()" onmouseup="updateNoteToolbar()"></div>
       </div>
     </div>
     <div style="margin-top:16px;">
@@ -3107,8 +3171,8 @@ function init() {
 
   // Notes
   const notesDate = now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  document.getElementById('notes-date-label').textContent = notesDate;
-  document.getElementById('notes-area').value = S.notes[todayKey()] || '';
+  document.getElementById('notes-date-text').textContent = notesDate;
+  document.getElementById('notes-area').innerHTML = noteToHtml(S.notes[todayKey()] || '');
   renderPastNotes();
 
   // Settings inputs
@@ -3642,22 +3706,76 @@ function jumpToDay(key) {
 // ──────────────────────────────────────────
 // NOTES / JOURNAL
 // ──────────────────────────────────────────
+function noteToHtml(v) {
+  if (!v) return '';
+  // Old notes were plain text; new ones are HTML
+  if (/<[a-z][\s\S]*>/i.test(v)) return v;
+  return escHtml(v).replace(/\n/g, '<br>');
+}
+
+function noteToText(v) {
+  if (!v) return '';
+  var tmp = document.createElement('div');
+  tmp.innerHTML = v;
+  return (tmp.textContent || '').trim();
+}
+
 function saveNotes() {
-  S.notes[todayKey()] = document.getElementById('notes-area').value;
+  var el = document.getElementById('notes-area');
+  if (el.getAttribute('contenteditable') === 'false') return; // viewing a past entry
+  var html = el.innerHTML;
+  if (!noteToText(html)) html = '';
+  S.notes[todayKey()] = html;
   save();
+}
+
+function noteCmd(cmd) {
+  var el = document.getElementById('notes-area');
+  if (el.getAttribute('contenteditable') === 'false') return;
+  el.focus();
+  document.execCommand(cmd, false, null);
+  saveNotes();
+  updateNoteToolbar();
+}
+
+function noteHeading() {
+  var el = document.getElementById('notes-area');
+  if (el.getAttribute('contenteditable') === 'false') return;
+  el.focus();
+  var isHeading = false;
+  try { isHeading = (document.queryCommandValue('formatBlock') || '').toLowerCase() === 'h3'; } catch(e) {}
+  document.execCommand('formatBlock', false, isHeading ? 'div' : 'h3');
+  saveNotes();
+  updateNoteToolbar();
+}
+
+function updateNoteToolbar() {
+  var btns = document.querySelectorAll('.notes-tool[data-cmd]');
+  btns.forEach(function(b) {
+    var on = false;
+    try { on = document.queryCommandState(b.getAttribute('data-cmd')); } catch(e) {}
+    b.classList.toggle('active', on);
+  });
+  var hBtn = document.getElementById('notes-tool-heading');
+  if (hBtn) {
+    var isH = false;
+    try { isH = (document.queryCommandValue('formatBlock') || '').toLowerCase() === 'h3'; } catch(e) {}
+    hBtn.classList.toggle('active', isH);
+  }
 }
 
 function renderPastNotes() {
   const el = document.getElementById('past-notes-list');
   const entries = Object.entries(S.notes)
-    .filter(([k,v]) => k !== todayKey() && v.trim())
+    .filter(([k,v]) => k !== todayKey() && noteToText(v))
     .sort((a,b) => b[0].localeCompare(a[0]))
     .slice(0, 7);
   if (!entries.length) { el.innerHTML = ''; return; }
   el.innerHTML = entries.map(([k,v]) => {
     const d = new Date(k + 'T00:00:00');
     const label = DAYS_SHORT[d.getDay()] + ', ' + MONTHS[d.getMonth()].slice(0,3) + ' ' + d.getDate();
-    const preview = v.trim().slice(0, 120) + (v.length > 120 ? '…' : '');
+    const text = noteToText(v);
+    const preview = text.slice(0, 120) + (text.length > 120 ? '…' : '');
     return `
       <div class="card" style="cursor:pointer;" onclick="loadNote('${k}')">
         <div class="card-body">
@@ -3671,9 +3789,19 @@ function renderPastNotes() {
 function loadNote(key) {
   const d = new Date(key + 'T00:00:00');
   const label = DAYS_SHORT[d.getDay()] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
-  document.getElementById('notes-date-label').textContent = label + ' (read-only)';
-  document.getElementById('notes-area').value = S.notes[key] || '';
-  document.getElementById('notes-area').setAttribute('readonly', true);
+  document.getElementById('notes-date-text').textContent = label + ' (read-only)';
+  document.getElementById('notes-area').innerHTML = noteToHtml(S.notes[key] || '');
+  document.getElementById('notes-area').setAttribute('contenteditable', 'false');
+  document.getElementById('notes-back-btn').style.display = '';
+}
+
+function backToTodayNote() {
+  const now = new Date();
+  const label = now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('notes-date-text').textContent = label;
+  document.getElementById('notes-area').innerHTML = noteToHtml(S.notes[todayKey()] || '');
+  document.getElementById('notes-area').setAttribute('contenteditable', 'true');
+  document.getElementById('notes-back-btn').style.display = 'none';
 }
 
 // ──────────────────────────────────────────
