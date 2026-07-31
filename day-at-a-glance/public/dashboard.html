@@ -1944,12 +1944,54 @@
     background: transparent;
     border: none;
     outline: none;
-    resize: none;
     min-height: 70px;
     font-style: italic;
   }
 
-  .sticky-note-text::placeholder { color: var(--ink3); }
+  .sticky-note-text:empty::before {
+    content: attr(data-placeholder);
+    color: var(--ink3);
+    pointer-events: none;
+  }
+
+  .sticky-note-text ul, .sticky-note-text ol { padding-left: 18px; margin: 4px 0; }
+  .sticky-note-text li { margin: 1px 0; }
+  .sticky-note-text h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    font-style: normal;
+    margin: 6px 0 2px;
+  }
+  .sticky-note-text b, .sticky-note-text strong { font-weight: 600; }
+
+  .sticky-note-tools {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    margin: 2px 0 5px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .sticky-note:hover .sticky-note-tools,
+  .sticky-note:focus-within .sticky-note-tools { opacity: 1; }
+
+  .sticky-tool {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--ink3);
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .sticky-tool:hover { color: var(--ink); background: rgba(0,0,0,0.06); }
 
   .sticky-note-pinned-badge {
     font-size: 9px;
@@ -4567,9 +4609,25 @@ function saveStickyText(id) {
   const n = (S.stickyNotes || []).find(n => n.id === id);
   const ta = document.getElementById('sn-text-' + id);
   if (!n || !ta) return;
-  n.text = ta.value;
+  var html = ta.innerHTML;
+  if (!noteToText(html)) html = '';
+  n.text = html;
   n.updatedDate = todayKey();
   save(); updateStickyCount();
+}
+
+function stickyCmd(id, cmd) {
+  var el = document.getElementById('sn-text-' + id);
+  if (!el) return;
+  el.focus();
+  if (cmd === 'heading') {
+    var isH = false;
+    try { isH = (document.queryCommandValue('formatBlock') || '').toLowerCase() === 'h3'; } catch(e) {}
+    document.execCommand('formatBlock', false, isH ? 'div' : 'h3');
+  } else {
+    document.execCommand(cmd, false, null);
+  }
+  saveStickyText(id);
 }
 
 function renderStickyNotes() {
@@ -4608,19 +4666,30 @@ function renderStickyNotes() {
             </button>
           </div>
         </div>
-        <textarea
+        <div class="sticky-note-tools">
+          <button class="sticky-tool" onmousedown="event.preventDefault()" onclick="stickyCmd(${n.id},'bold')" title="Bold"><i class="ti ti-bold" aria-hidden="true"></i></button>
+          <button class="sticky-tool" onmousedown="event.preventDefault()" onclick="stickyCmd(${n.id},'italic')" title="Italic"><i class="ti ti-italic" aria-hidden="true"></i></button>
+          <button class="sticky-tool" onmousedown="event.preventDefault()" onclick="stickyCmd(${n.id},'underline')" title="Underline"><i class="ti ti-underline" aria-hidden="true"></i></button>
+          <button class="sticky-tool" onmousedown="event.preventDefault()" onclick="stickyCmd(${n.id},'strikeThrough')" title="Strikethrough"><i class="ti ti-strikethrough" aria-hidden="true"></i></button>
+          <button class="sticky-tool" onmousedown="event.preventDefault()" onclick="stickyCmd(${n.id},'heading')" title="Heading"><i class="ti ti-heading" aria-hidden="true"></i></button>
+          <button class="sticky-tool" onmousedown="event.preventDefault()" onclick="stickyCmd(${n.id},'insertUnorderedList')" title="Bulleted list"><i class="ti ti-list" aria-hidden="true"></i></button>
+          <button class="sticky-tool" onmousedown="event.preventDefault()" onclick="stickyCmd(${n.id},'insertOrderedList')" title="Numbered list"><i class="ti ti-list-numbers" aria-hidden="true"></i></button>
+          <button class="sticky-tool" onmousedown="event.preventDefault()" onclick="stickyCmd(${n.id},'removeFormat')" title="Clear formatting"><i class="ti ti-clear-formatting" aria-hidden="true"></i></button>
+        </div>
+        <div
           id="sn-text-${n.id}"
           class="sticky-note-text"
-          placeholder="Write anything…"
+          contenteditable="true"
+          data-placeholder="Write anything…"
           oninput="saveStickyText(${n.id})"
-        >${escHtml(n.text)}</textarea>
+        >${noteToHtml(n.text)}</div>
       </div>`;
   }).join('');
   updateStickyCount();
 }
 
 function updateStickyCount() {
-  const count = (S.stickyNotes || []).filter(n => n.text.trim()).length;
+  const count = (S.stickyNotes || []).filter(n => noteToText(n.text)).length;
   const el = document.getElementById('sticky-count');
   if (!el) return;
   if (count > 0) { el.textContent = count; el.style.display = 'flex'; }
