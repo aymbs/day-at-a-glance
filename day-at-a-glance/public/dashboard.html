@@ -1878,18 +1878,38 @@
   }
 
   .sticky-note {
-    width: 240px;
-    min-height: 110px;
+    width: 280px;
+    min-width: 200px;
+    max-width: 480px;
+    min-height: 120px;
+    max-height: 70vh;
     border-radius: 12px;
     padding: 12px 14px;
     position: relative;
     box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
-    transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s;
+    transition: box-shadow 0.18s;
     animation: popIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both;
+    display: flex;
+    flex-direction: column;
+    resize: both;
+    overflow: auto;
+  }
+
+  .sticky-note::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--ink3);
+    border-bottom: 2px solid var(--ink3);
+    border-radius: 0 0 3px 0;
+    opacity: 0.35;
+    pointer-events: none;
   }
 
   .sticky-note:hover {
-    transform: translateY(-2px) rotate(-0.5deg);
     box-shadow: 0 8px 24px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);
   }
 
@@ -1945,6 +1965,7 @@
     border: none;
     outline: none;
     min-height: 70px;
+    flex: 1;
     font-style: italic;
   }
 
@@ -4616,6 +4637,28 @@ function saveStickyText(id) {
   save(); updateStickyCount();
 }
 
+const _stickyResizeTimers = {};
+
+function watchStickyResize(id) {
+  const el = document.getElementById('sn-' + id);
+  if (!el || typeof ResizeObserver === 'undefined') return;
+  let first = true;
+  new ResizeObserver(function() {
+    if (first) { first = false; return; }
+    if (!el.offsetWidth) return; // panel hidden
+    const n = (S.stickyNotes || []).find(n => n.id === id);
+    if (!n) return;
+    const w = Math.round(el.offsetWidth);
+    const h = Math.round(el.offsetHeight);
+    if (Math.abs((n.w || 0) - w) < 3 && Math.abs((n.h || 0) - h) < 3) return;
+    clearTimeout(_stickyResizeTimers[id]);
+    _stickyResizeTimers[id] = setTimeout(function() {
+      n.w = w; n.h = h;
+      save();
+    }, 400);
+  }).observe(el);
+}
+
 function stickyCmd(id, cmd) {
   var el = document.getElementById('sn-text-' + id);
   if (!el) return;
@@ -4650,7 +4693,7 @@ function renderStickyNotes() {
       `<div class="sticky-color-dot ${n.color===key?'selected':''}" style="background:${hex};width:11px;height:11px;" onclick="changeStickyColor(${n.id},'${key}')"></div>`
     ).join('');
     return `
-      <div class="sticky-note color-${n.color}" id="sn-${n.id}">
+      <div class="sticky-note color-${n.color}" id="sn-${n.id}" style="${n.w ? `width:${n.w}px;height:${n.h}px;` : ''}">
         <div class="sticky-note-header">
           <div style="display:flex;align-items:center;gap:5px;">
             <span class="sticky-note-date">${dateLabel}</span>
@@ -4685,6 +4728,7 @@ function renderStickyNotes() {
         >${noteToHtml(n.text)}</div>
       </div>`;
   }).join('');
+  notes.forEach(n => watchStickyResize(n.id));
   updateStickyCount();
 }
 
