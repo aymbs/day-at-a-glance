@@ -2752,6 +2752,17 @@
       </div>
       <div class="card">
         <div class="card-header">
+          <div class="card-title"><i class="ti ti-refresh" aria-hidden="true"></i> Sync across devices</div>
+        </div>
+        <div class="card-body">
+          <div class="settings-row">
+            <div><div class="settings-label">Sync now</div><div class="settings-sub" id="sync-status">Not synced yet</div></div>
+            <button class="btn-add" onclick="syncNow()">Sync</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
           <div class="card-title"><i class="ti ti-trash" aria-hidden="true"></i> Data</div>
         </div>
         <div class="card-body">
@@ -2988,6 +2999,204 @@ function restoreBackup() {
     location.reload();
   } catch(e) {
     alert('Could not restore that backup: ' + e.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// CROSS-DEVICE SYNC
+// Three-way merge (base = last synced snapshot, local = this
+// device, remote = server) so syncing combines what changed on
+// each side instead of one device's save overwriting the other's.
+// Manual only: triggered by the Sync button and once on page load.
+// ══════════════════════════════════════════════════════
+
+var SYNC_TOKEN = 'R9pamfO0vJHFV55HqHisJwMJsntZrLIK';
+var SYNC_ENDPOINT = '/api/sync';
+var SYNC_FIELDS = ['tasks', 'weeklyPriorities', 'goals', 'reminders', 'stickyNotes', 'books', 'workouts',
+  'notes', 'workoutLogs', 'intention', 'pomSessions', 'habits', 'settings', '_deletedLabels'];
+var SYNC_ID_ARRAYS = ['tasks', 'weeklyPriorities', 'goals', 'reminders', 'stickyNotes', 'books', 'workouts'];
+var SYNC_DATE_MAPS = ['notes', 'workoutLogs', 'intention', 'pomSessions'];
+var _syncInFlight = false;
+
+function syncDeepEqual(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+function syncUniq(arr) { return Array.from(new Set(arr)); }
+function syncKeyBy(arr, k) {
+  var out = {};
+  (arr || []).forEach(function(item) { out[item[k]] = item; });
+  return out;
+}
+
+function syncMergeFields(l, r, b) {
+  var keys = syncUniq([].concat(Object.keys(l || {}), Object.keys(r || {})));
+  var out = {};
+  keys.forEach(function(k) {
+    var lv = l ? l[k] : undefined, rv = r ? r[k] : undefined, bv = b ? b[k] : undefined;
+    if (syncDeepEqual(lv, rv)) { out[k] = lv; return; }
+    var lChanged = !syncDeepEqual(lv, bv);
+    var rChanged = !syncDeepEqual(rv, bv);
+    if (lChanged && !rChanged) { out[k] = lv; return; }
+    if (rChanged && !lChanged) { out[k] = rv; return; }
+    out[k] = lv; // true field-level conflict -> prefer local
+  });
+  return out;
+}
+
+function syncMergeIdArray(base, local, remote) {
+  base = base || []; local = local || []; remote = remote || [];
+  var baseMap = syncKeyBy(base, 'id'), localMap = syncKeyBy(local, 'id'), remoteMap = syncKeyBy(remote, 'id');
+  var ids = syncUniq([].concat(Object.keys(baseMap), Object.keys(localMap), Object.keys(remoteMap)));
+  var out = [];
+  ids.forEach(function(id) {
+    var b = baseMap[id], l = localMap[id], r = remoteMap[id];
+    if (!l && !r) return;
+    if (l && !r) {
+      if (!b) { out.push(l); return; }
+      if (syncDeepEqual(l, b)) return;
+      out.push(l); return;
+    }
+    if (!l && r) {
+      if (!b) { out.push(r); return; }
+      if (syncDeepEqual(r, b)) return;
+      out.push(r); return;
+    }
+    if (syncDeepEqual(l, r)) { out.push(l); return; }
+    if (!b) { out.push(syncMergeFields(l, r, null)); return; }
+    var localChanged = !syncDeepEqual(l, b);
+    var remoteChanged = !syncDeepEqual(r, b);
+    if (localChanged && !remoteChanged) { out.push(l); return; }
+    if (remoteChanged && !localChanged) { out.push(r); return; }
+    out.push(syncMergeFields(l, r, b));
+  });
+  return out;
+}
+
+function syncMergeDateMap(base, local, remote) {
+  base = base || {}; local = local || {}; remote = remote || {};
+  var keys = syncUniq([].concat(Object.keys(base), Object.keys(local), Object.keys(remote)));
+  var out = {};
+  keys.forEach(function(k) {
+    var b = base[k], l = local[k], r = remote[k];
+    var lHas = Object.prototype.hasOwnProperty.call(local, k);
+    var rHas = Object.prototype.hasOwnProperty.call(remote, k);
+    var bHas = Object.prototype.hasOwnProperty.call(base, k);
+    if (!lHas && !rHas) return;
+    if (lHas && !rHas) {
+      if (!bHas) { out[k] = l; return; }
+      if (syncDeepEqual(l, b)) return;
+      out[k] = l; return;
+    }
+    if (!lHas && rHas) {
+      if (!bHas) { out[k] = r; return; }
+      if (syncDeepEqual(r, b)) return;
+      out[k] = r; return;
+    }
+    if (syncDeepEqual(l, r)) { out[k] = l; return; }
+    var lChanged = !syncDeepEqual(l, b);
+    var rChanged = !syncDeepEqual(r, b);
+    if (lChanged && !rChanged) { out[k] = l; return; }
+    if (rChanged && !lChanged) { out[k] = r; return; }
+    out[k] = l; // genuine same-day conflict -> prefer local
+  });
+  return out;
+}
+
+function syncMergeHabits(base, local, remote) {
+  function stripHistory(arr) {
+    return (arr || []).map(function(h) { var c = Object.assign({}, h); delete c.history; return c; });
+  }
+  var defsMerged = syncMergeIdArray(stripHistory(base), stripHistory(local), stripHistory(remote));
+  var baseMap = syncKeyBy(base || [], 'id'), localMap = syncKeyBy(local || [], 'id'), remoteMap = syncKeyBy(remote || [], 'id');
+  return defsMerged.map(function(def) {
+    var id = def.id;
+    var history = syncMergeDateMap(
+      (baseMap[id] || {}).history, (localMap[id] || {}).history, (remoteMap[id] || {}).history
+    );
+    return Object.assign({}, def, { history: history });
+  });
+}
+
+function syncMergeSettings(base, local, remote) {
+  base = base || {}; local = local || {}; remote = remote || {};
+  var DEVICE_LOCAL_FIELDS = ['gcalToken', 'gcalConnected'];
+  var b = Object.assign({}, base), l = Object.assign({}, local), r = Object.assign({}, remote);
+  DEVICE_LOCAL_FIELDS.forEach(function(f) { delete b[f]; delete l[f]; delete r[f]; });
+  var merged = syncMergeFields(l, r, b);
+  DEVICE_LOCAL_FIELDS.forEach(function(f) { merged[f] = local[f]; });
+  return merged;
+}
+
+function syncMergeState(base, local, remote) {
+  base = base || {}; local = local || {}; remote = remote || {};
+  var out = {};
+  SYNC_ID_ARRAYS.forEach(function(k) { out[k] = syncMergeIdArray(base[k], local[k], remote[k]); });
+  SYNC_DATE_MAPS.forEach(function(k) { out[k] = syncMergeDateMap(base[k], local[k], remote[k]); });
+  out.habits = syncMergeHabits(base.habits, local.habits, remote.habits);
+  out.settings = syncMergeSettings(base.settings, local.settings, remote.settings);
+  out._deletedLabels = syncUniq([].concat(local._deletedLabels || [], remote._deletedLabels || []));
+  return out;
+}
+
+function buildSyncSlice(state) {
+  var out = {};
+  SYNC_FIELDS.forEach(function(f) { out[f] = state[f]; });
+  return JSON.parse(JSON.stringify(out));
+}
+
+function setSyncStatus(text) {
+  var el = document.getElementById('sync-status');
+  if (el) el.textContent = text;
+}
+
+var _lastSyncError = null;
+
+function refreshSyncStatus() {
+  if (_syncInFlight) return;
+  if (_lastSyncError) { setSyncStatus('Sync failed: ' + _lastSyncError); return; }
+  setSyncStatus(S._lastSyncedAt ? ('Last synced: ' + new Date(S._lastSyncedAt).toLocaleTimeString()) : 'Not synced yet');
+}
+
+async function syncNow() {
+  if (_syncInFlight) return;
+  _syncInFlight = true;
+  setSyncStatus('Syncing…');
+  try {
+    var attempts = 0;
+    while (attempts < 2) {
+      attempts++;
+      var getResp = await fetch(SYNC_ENDPOINT, { headers: { 'x-sync-token': SYNC_TOKEN } });
+      if (!getResp.ok) throw new Error('Fetch failed (' + getResp.status + ')');
+      var getBody = await getResp.json();
+      var remoteData = getBody.data || {};
+      var remoteUpdatedAt = getBody.updatedAt || null;
+
+      var localSlice = buildSyncSlice(S);
+      var merged = syncMergeState(S._syncBase, localSlice, remoteData);
+
+      var postResp = await fetch(SYNC_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-sync-token': SYNC_TOKEN },
+        body: JSON.stringify({ data: merged, expectedUpdatedAt: remoteUpdatedAt })
+      });
+
+      if (postResp.status === 409) continue; // someone else synced in between - retry once
+
+      if (!postResp.ok) throw new Error('Save failed (' + postResp.status + ')');
+
+      SYNC_FIELDS.forEach(function(f) { S[f] = merged[f]; });
+      S._syncBase = JSON.parse(JSON.stringify(merged));
+      S._lastSyncedAt = Date.now();
+      _lastSyncError = null;
+      save();
+      init();
+      setSyncStatus('Last synced: ' + new Date(S._lastSyncedAt).toLocaleTimeString());
+      _syncInFlight = false;
+      return;
+    }
+    throw new Error('Sync conflict — please try again');
+  } catch (e) {
+    _lastSyncError = e.message;
+    setSyncStatus('Sync failed: ' + e.message);
+    _syncInFlight = false;
   }
 }
 
@@ -4300,7 +4509,7 @@ function switchView(v) {
   if (v === 'consistency') renderConsistency();
   if (v === 'weekly') { refreshWeekView(); renderWorkouts(); }
   if (v === 'monthly') { refreshMonthView(); renderMonthlyReading(); }
-  if (v === 'settings') { renderGcalSettings(); updateGcalStatus(); populateBackupList(); }
+  if (v === 'settings') { renderGcalSettings(); updateGcalStatus(); populateBackupList(); refreshSyncStatus(); }
 }
 
 function toggleForm(id) {
@@ -5550,6 +5759,7 @@ init();
 initPom();
 var _dqEl = document.getElementById("daily-quote"); if (_dqEl) _dqEl.textContent = '"' + getDailyQuote() + '"';
 save(); // seeds today's rotating backup even before any edits
+syncNow(); // safe to call automatically: merges rather than overwrites
 
 
 updateStickyCount();
