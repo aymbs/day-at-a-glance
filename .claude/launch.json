@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dashboard-local",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8936", "--bind", "127.0.0.1", "--directory", "day-at-a-glance/public"],
+      "port": 8936
+    }
+  ]
+}

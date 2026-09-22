@@ -2765,6 +2765,13 @@
             <input type="file" id="import-file-input" accept=".json,application/json" style="display:none" onchange="importData(this)">
           </div>
           <div class="settings-row">
+            <div><div class="settings-label">Restore from local backup</div><div class="settings-sub">Automatic daily snapshots, kept for 30 days</div></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select class="settings-input" id="backup-select" style="max-width:150px;"><option value="">No backups yet</option></select>
+              <button class="btn-add" onclick="restoreBackup()">Restore</button>
+            </div>
+          </div>
+          <div class="settings-row">
             <div><div class="settings-label">Clear all data</div><div class="settings-sub">Permanently resets the dashboard</div></div>
             <button onclick="clearData()" style="font-family:var(--font-body);font-size:13px;padding:7px 16px;background:transparent;border:1px solid var(--blush-mid);color:var(--blush-deep);border-radius:var(--r-sm);cursor:pointer;">Clear data</button>
           </div>
@@ -2922,8 +2929,66 @@ function load() {
 }
 
 
+var BACKUP_PREFIX = STORE_KEY + '_backup_';
+var BACKUP_RETENTION_DAYS = 30;
+
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e) {}
+  try {
+    var json = JSON.stringify(S);
+    localStorage.setItem(STORE_KEY, json);
+    // Rolling daily backup: overwritten throughout the day, frozen once the date changes.
+    localStorage.setItem(BACKUP_PREFIX + todayKey(), json);
+    pruneOldBackups();
+  } catch(e) {}
+}
+
+function pruneOldBackups() {
+  try {
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - BACKUP_RETENTION_DAYS);
+    for (var i = localStorage.length - 1; i >= 0; i--) {
+      var key = localStorage.key(i);
+      if (key && key.indexOf(BACKUP_PREFIX) === 0) {
+        var d = new Date(key.slice(BACKUP_PREFIX.length));
+        if (!isNaN(d) && d < cutoff) localStorage.removeItem(key);
+      }
+    }
+  } catch(e) {}
+}
+
+function listBackups() {
+  var out = [];
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (key && key.indexOf(BACKUP_PREFIX) === 0) out.push(key.slice(BACKUP_PREFIX.length));
+    }
+  } catch(e) {}
+  return out.sort().reverse();
+}
+
+function populateBackupList() {
+  var sel = document.getElementById('backup-select');
+  if (!sel) return;
+  var dates = listBackups().filter(function(d) { return d !== todayKey(); });
+  sel.innerHTML = dates.length
+    ? dates.map(function(d) { return '<option value="' + d + '">' + d + '</option>'; }).join('')
+    : '<option value="">No backups yet</option>';
+}
+
+function restoreBackup() {
+  var sel = document.getElementById('backup-select');
+  var d = sel && sel.value;
+  if (!d) return;
+  if (!confirm('Replace all current data with the backup from ' + d + '? Your current data will be overwritten.')) return;
+  try {
+    var raw = localStorage.getItem(BACKUP_PREFIX + d);
+    if (!raw) { alert('That backup could not be found.'); return; }
+    localStorage.setItem(STORE_KEY, raw);
+    location.reload();
+  } catch(e) {
+    alert('Could not restore that backup: ' + e.message);
+  }
 }
 
 // Merge two plain objects (combine all keys, prefer local)
@@ -4189,7 +4254,6 @@ function importData(inputEl) {
         return;
       }
       if (!confirm('Replace all current data with this backup?')) return;
-      data._cloudMigrated = true;
       localStorage.setItem(STORE_KEY, JSON.stringify(data));
       location.reload();
     } catch(e) {
@@ -4236,7 +4300,7 @@ function switchView(v) {
   if (v === 'consistency') renderConsistency();
   if (v === 'weekly') { refreshWeekView(); renderWorkouts(); }
   if (v === 'monthly') { refreshMonthView(); renderMonthlyReading(); }
-  if (v === 'settings') { renderGcalSettings(); updateGcalStatus(); }
+  if (v === 'settings') { renderGcalSettings(); updateGcalStatus(); populateBackupList(); }
 }
 
 function toggleForm(id) {
@@ -5481,94 +5545,11 @@ function saveWorkoutLog(dk) {
   save();
 }
 
-// Auto-pull from cloud every 30 seconds
-
-// Start auto-pull every 30 seconds
-
-
-// Auto-sync handles everything
-
-
-// ══════════════════════════════════════════
-// SIMPLE SYNC: Last write wins, always identical
-// ══════════════════════════════════════════
-
-// Auto-pull every 15 seconds
-
-// Alias for save's debounced sync
-
-
-
-
-// ══════════════════════════════════════════════════════
-// ONE-TIME CLOUD MIGRATION (local-only mode)
-// On first load, imports the last state saved in Supabase
-// into localStorage, then never contacts the cloud again.
-// ══════════════════════════════════════════════════════
-
-async function migrateFromCloud() {
-  if (S._cloudMigrated) return;
-  var SUPA_URL = 'https://okszofmyokhqpiiowexl.supabase.co';
-  var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rc3pvZm15b2tocXBpaW93ZXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NzkzODIsImV4cCI6MjA5NTE1NTM4Mn0.seN6gcmjHPszN0K4v9gFj9Sn7iJxU0jAeY2e9ga1Ts4';
-  try {
-    var resp = await fetch(SUPA_URL + '/rest/v1/notes?date_key=eq.__full_state__&select=content', {
-      headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY }
-    });
-    var rows = await resp.json();
-    if (rows && rows.length && rows[0].content) {
-      var cloud = JSON.parse(rows[0].content);
-      var cloudTs = cloud._ts || 0;
-      var localTs = S._ts || 0;
-      var cloudHasData = (cloud.tasks || []).length > 0 || (cloud.books || []).length > 0 || Object.keys(cloud.notes || {}).length > 0;
-      if (cloudHasData && cloudTs > localTs) {
-        S.tasks = cloud.tasks || [];
-        S.habits = cloud.habits || [];
-        S.books = cloud.books || [];
-        S.workouts = cloud.workouts || [];
-        S.workoutLogs = cloud.workoutLogs || {};
-        S.goals = (cloud.goals && cloud.goals.length) ? cloud.goals : S.goals;
-        S.weeklyPriorities = cloud.weeklyPriorities || [];
-        S.notes = cloud.notes || {};
-        S.intention = cloud.intention || {};
-        S.stickyNotes = cloud.stickyNotes || [];
-        S.pomSessions = cloud.pomSessions || {};
-        if (cloud.settings) {
-          var localName = S.settings.name;
-          var localTitle = S.settings.title;
-          S.settings = Object.assign({}, S.settings, cloud.settings);
-          // Never overwrite a set name/title with empty
-          if (localName && !S.settings.name) S.settings.name = localName;
-          if (localTitle && localTitle !== 'POV: a vc baddie\'s life' && (!S.settings.title || S.settings.title === 'POV: a vc baddie\'s life')) S.settings.title = localTitle;
-        }
-        (S.books || []).forEach(function(b) {
-          if (b.coverId === undefined) b.coverId = null;
-          if (b.isAudiobook === undefined) b.isAudiobook = false;
-          if (b.pctComplete === undefined) b.pctComplete = 0;
-        });
-        S._cloudMigrated = true;
-        save();
-        init();
-        purgeBlacklistedTasks();
-        console.log('Migrated data from cloud - Tasks=' + S.tasks.length);
-        return;
-      }
-    }
-    // Cloud empty or older than local - keep local, mark done
-    S._cloudMigrated = true;
-    save();
-    console.log('Cloud migration: keeping local data');
-  } catch(e) {
-    // Network failed - do NOT set the flag, so it retries next load
-    console.log('Cloud migration skipped (will retry):', e.message);
-  }
-}
-
-
 handleOAuthCallback();
 init();
 initPom();
 var _dqEl = document.getElementById("daily-quote"); if (_dqEl) _dqEl.textContent = '"' + getDailyQuote() + '"';
-migrateFromCloud();
+save(); // seeds today's rotating backup even before any edits
 
 
 updateStickyCount();
