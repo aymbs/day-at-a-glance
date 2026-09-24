@@ -3329,7 +3329,38 @@ function clearExpiredCarriedTasks() {
   save();
 }
 
+// If two devices each carry the same overdue task forward on a day they
+// haven't synced with each other, they used to generate two different ids
+// for it (uid() is device-local), so the sync merge kept both - a visible
+// duplicate that then got carried forward again every day after. Dedupe by
+// (label, date) collapses any of those back to one, regardless of how the
+// duplicate id came to exist.
+function dedupeTasks() {
+  var seen = {};
+  var deduped = [];
+  S.tasks.forEach(function(t) {
+    var key = t.label.toLowerCase().trim() + '|' + t.date;
+    var existing = seen[key];
+    if (!existing) {
+      seen[key] = t;
+      deduped.push(t);
+    } else if (t.done && !existing.done) {
+      deduped[deduped.indexOf(existing)] = t;
+      seen[key] = t;
+    }
+  });
+  if (deduped.length !== S.tasks.length) {
+    console.log('Deduped ' + (S.tasks.length - deduped.length) + ' duplicate tasks');
+    S.tasks = deduped;
+  }
+}
+
+function daysSinceEpoch(dateKey) {
+  return Math.floor(new Date(dateKey + 'T00:00:00Z').getTime() / 86400000);
+}
+
 function carryOverTasks() {
+  dedupeTasks();
   clearExpiredCarriedTasks();
   var todayKey_ = todayKey();
 
@@ -3380,7 +3411,10 @@ function carryOverTasks() {
     });
     if (!alreadyCarried) {
       S.tasks.push({
-        id: uid(),
+        // Deterministic, not uid(): two devices carrying the same overdue
+        // task forward on the same day must land on the same id, so a later
+        // sync merges them into one instead of keeping both as "different" tasks.
+        id: oldTask.id + daysSinceEpoch(todayKey_) * 1000000,
         label: oldTask.label,
         done: false,
         priority: oldTask.priority,
