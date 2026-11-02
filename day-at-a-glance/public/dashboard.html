@@ -2370,7 +2370,30 @@
   .pg-week-btn { font-family:var(--font-body); font-size:13px; font-weight:500; min-width:42px; padding:7px 12px; border-radius:20px; border:1px solid var(--cream-dark); background:var(--white); color:var(--ink2); cursor:pointer; }
   .pg-week-btn:hover { border-color:var(--sage-light); }
   .pg-week-btn.active { background:var(--sage); border-color:var(--sage); color:#fff; }
-  .pg-week-head { margin-bottom:16px; }
+  .pg-week-btn.done { background:var(--sage-soft); border-color:var(--sage-light); color:var(--sage); }
+  .pg-week-btn.done::after { content:' \2713'; font-size:11px; }
+  .pg-week-btn.active.done { background:var(--sage); border-color:var(--sage); color:#fff; }
+  .pg-hero { margin-bottom:16px; padding:18px 20px; background:linear-gradient(135deg, var(--sage-soft) 0%, var(--blush-soft) 100%); border:1px solid var(--sage-light); border-radius:var(--r-lg); }
+  .pg-hero-bar { height:8px; border-radius:8px; background:rgba(255,255,255,0.75); margin-top:16px; overflow:hidden; }
+  .pg-hero-bar span { display:block; height:100%; width:0; border-radius:8px; background:linear-gradient(90deg, var(--sage-mid), var(--gold)); transition:width .35s ease; }
+  .pg-hero-foot { display:flex; justify-content:space-between; align-items:center; gap:8px 14px; flex-wrap:wrap; margin-top:8px; font-size:12px; color:var(--ink2); font-weight:500; }
+  .pg-legend { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--ink3); font-weight:400; }
+  .pg-legend i { width:9px; height:9px; border-radius:50%; display:inline-block; margin-left:8px; }
+  .pg-legend i:first-child { margin-left:0; }
+  .pg-legend i.priority { background:var(--gold); }
+  .pg-legend i.power { background:var(--sage-light); }
+  .pg-legend i.core { background:var(--cream-dark); }
+  .pg-prog { margin-left:auto; font-family:var(--font-mono); font-size:11px; padding:3px 10px; border-radius:20px; background:var(--cream-mid); color:var(--ink2); }
+  .pg-day.done { border-color:var(--sage-light); }
+  .pg-day.done .pg-prog { background:var(--sage); color:#fff; }
+  .pg-day.done .pg-prog::before { content:'\2713 '; }
+  .pg-sets { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .pg-sets-label { font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink3); min-width:34px; }
+  .pg-set { width:38px; height:38px; border-radius:50%; border:1.5px solid var(--cream-dark); background:var(--cream); color:var(--ink3); font-family:var(--font-mono); font-size:13px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background .15s, border-color .15s, transform .1s; }
+  .pg-set:active { transform:scale(0.92); }
+  .pg-set.on { background:var(--sage-mid); border-color:var(--sage-mid); color:#fff; }
+  .pg-ex.done .pg-ex-name { color:var(--ink3); text-decoration:line-through; text-decoration-color:var(--cream-dark); }
+  .pg-ex.done .pg-ex-cue, .pg-ex.done .pg-ex-pattern { opacity:0.6; }
   .pg-week-kicker { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink3); }
   .pg-week-block { font-family:var(--font-display); font-size:26px; font-weight:500; color:var(--ink); line-height:1.15; margin-top:2px; }
   .pg-week-focus { font-size:13px; color:var(--ink2); margin-top:4px; line-height:1.5; }
@@ -2413,6 +2436,58 @@
   .pg-note-title { font-size:13.5px; font-weight:500; color:var(--ink); margin-top:10px; }
   .pg-list { margin:0 0 4px 18px; font-size:13.5px; color:var(--ink2); line-height:1.6; }
   .pg-list li { margin-bottom:3px; }
+
+  /* ── CLEANING GUIDE ── */
+  .cl-hero { display:flex; align-items:center; gap:18px; padding:18px 20px; margin-bottom:14px; background:linear-gradient(135deg, var(--sage-soft) 0%, var(--blush-soft) 100%); border:1px solid var(--sage-light); border-radius:var(--r-lg); }
+  .cl-ring { position:relative; width:68px; height:68px; flex-shrink:0; }
+  .cl-ring svg { width:68px; height:68px; transform:rotate(-90deg); }
+  .cl-ring circle { fill:none; stroke-width:7; }
+  .cl-ring .bg { stroke:rgba(255,255,255,0.85); }
+  .cl-ring .fg { stroke:var(--sage-mid); stroke-linecap:round; transition:stroke-dashoffset .4s ease; }
+  .cl-ring.full .fg { stroke:var(--gold); }
+  .cl-ring span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:12px; font-weight:500; color:var(--sage); }
+  .cl-hero-kicker { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink3); }
+  .cl-hero-title { font-family:var(--font-display); font-size:26px; font-weight:500; color:var(--ink); line-height:1.15; margin-top:2px; }
+  .cl-hero-sub { font-size:12.5px; color:var(--ink2); margin-top:4px; line-height:1.45; }
+  .cl-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .cl-tab { font-family:var(--font-body); font-size:13px; font-weight:500; padding:7px 16px; border-radius:20px; border:1px solid var(--cream-dark); background:var(--white); color:var(--ink2); cursor:pointer; }
+  .cl-tab:hover { border-color:var(--sage-light); }
+  .cl-tab.active { background:var(--sage); border-color:var(--sage); color:#fff; }
+  .cl-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:14px; }
+  .cl-card { background:var(--white); border:1px solid var(--cream-dark); border-radius:var(--r-lg); padding:14px 16px 8px; }
+  .cl-card.today { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold-mid); }
+  .cl-card.month { border-top:3px solid var(--gold); }
+  .cl-card.daily { background:var(--sage); border-color:var(--sage); }
+  .cl-card.dim { opacity:0.65; }
+  .cl-card-top { display:flex; justify-content:space-between; align-items:center; font-size:10.5px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink3); }
+  .cl-card.daily .cl-card-top { color:rgba(255,255,255,0.7); }
+  .cl-card-title { font-family:var(--font-display); font-size:23px; font-weight:500; color:var(--sage); line-height:1.15; margin:5px 0 8px; }
+  .cl-card.daily .cl-card-title { color:var(--gold-mid); }
+  .cl-chip { font-family:var(--font-mono); font-size:10.5px; letter-spacing:0; padding:2px 8px; border-radius:20px; background:var(--cream-mid); color:var(--ink2); text-transform:none; }
+  .cl-chip.full { background:var(--sage); color:#fff; }
+  .cl-card.daily .cl-chip { background:rgba(255,255,255,0.16); color:#fff; }
+  .cl-card.daily .cl-chip.full { background:var(--gold-mid); color:var(--sage); }
+  .cl-item { position:relative; display:flex; align-items:flex-start; gap:11px; padding:10px 0; border-top:1px solid var(--cream-mid); font-size:13.5px; color:var(--ink); line-height:1.4; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; }
+  .cl-card.daily .cl-item { color:#fff; border-top-color:rgba(255,255,255,0.14); }
+  .cl-item input { position:absolute; opacity:0; width:0; height:0; }
+  .cl-box { width:22px; height:22px; border-radius:7px; border:1.5px solid var(--cream-dark); background:var(--white); flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:background .15s, border-color .15s; }
+  .cl-box::after { content:'\2713'; font-size:13px; color:transparent; font-weight:700; }
+  .cl-card.daily .cl-box { background:transparent; border-color:rgba(255,255,255,0.55); }
+  .cl-item input:checked + .cl-box { background:var(--sage-mid); border-color:var(--sage-mid); }
+  .cl-item input:checked + .cl-box::after { color:#fff; }
+  .cl-card.daily .cl-item input:checked + .cl-box { background:var(--gold-mid); border-color:var(--gold-mid); }
+  .cl-card.daily .cl-item input:checked + .cl-box::after { color:var(--sage); }
+  .cl-item input:checked ~ .cl-text { color:var(--ink3); text-decoration:line-through; text-decoration-color:var(--cream-dark); }
+  .cl-card.daily .cl-item input:checked ~ .cl-text { color:rgba(255,255,255,0.5); }
+  .cl-item input:focus-visible + .cl-box { outline:2px solid var(--gold); outline-offset:2px; }
+  .cl-item input:disabled + .cl-box { opacity:0.5; }
+  .cl-nudges { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .cl-nudge { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--white); border:1px solid var(--cream-dark); border-radius:var(--r-lg); font-size:13px; color:var(--ink); cursor:pointer; text-align:left; font-family:var(--font-body); }
+  .cl-nudge:hover { border-color:var(--sage-light); background:var(--sage-soft); }
+  .cl-nudge b { font-weight:500; }
+  .cl-nudge .grow { flex:1; min-width:0; }
+  .cl-nudge small { display:block; color:var(--ink3); font-size:11.5px; margin-top:1px; }
+  .cl-foot { text-align:center; font-family:var(--font-display); font-style:italic; font-size:17px; color:var(--ink2); margin:22px 0 6px; }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -2452,6 +2527,9 @@
   <div class="nav-section-label">Guides</div>
   <div class="nav-item" onclick="switchView('program')" data-view="program">
     <i class="ti ti-barbell" aria-hidden="true"></i> <span>Workout</span>
+  </div>
+  <div class="nav-item" onclick="switchView('cleaning')" data-view="cleaning">
+    <i class="ti ti-sparkles" aria-hidden="true"></i> <span>Cleaning</span>
   </div>
 
   <div class="nav-section-label">Config</div>
@@ -2786,6 +2864,15 @@
     <input type="file" id="program-file-input" accept=".json,application/json" style="display:none" onchange="importProgram(this)">
   </div>
 
+  <!-- ── CLEANING ── -->
+  <div id="view-cleaning" class="view">
+    <div class="page-header">
+      <h2>Home reset</h2>
+      <div class="sub">Weekdays 15 to 30 min. Extras ride along on weekends.</div>
+    </div>
+    <div id="cleaning-body"></div>
+  </div>
+
   <!-- ── SETTINGS ── -->
   <div id="view-settings" class="view">
     <div class="page-header">
@@ -2973,6 +3060,7 @@ function defaultState() {
     workouts: [],
     guides: {},
     workoutProgramLog: {},
+    cleaningChecks: {},
 
   };
 }
@@ -3088,9 +3176,9 @@ function restoreBackup() {
 var SYNC_TOKEN = 'R9pamfO0vJHFV55HqHisJwMJsntZrLIK';
 var SYNC_ENDPOINT = '/api/sync';
 var SYNC_FIELDS = ['tasks', 'weeklyPriorities', 'goals', 'reminders', 'stickyNotes', 'books', 'workouts',
-  'notes', 'workoutLogs', 'intention', 'pomSessions', 'guides', 'workoutProgramLog', 'habits', 'settings', '_deletedLabels'];
+  'notes', 'workoutLogs', 'intention', 'pomSessions', 'guides', 'workoutProgramLog', 'cleaningChecks', 'habits', 'settings', '_deletedLabels'];
 var SYNC_ID_ARRAYS = ['tasks', 'weeklyPriorities', 'goals', 'reminders', 'stickyNotes', 'books', 'workouts'];
-var SYNC_DATE_MAPS = ['notes', 'workoutLogs', 'intention', 'pomSessions', 'guides', 'workoutProgramLog'];
+var SYNC_DATE_MAPS = ['notes', 'workoutLogs', 'intention', 'pomSessions', 'guides', 'workoutProgramLog', 'cleaningChecks'];
 var _syncInFlight = false;
 
 function syncDeepEqual(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
@@ -3650,6 +3738,7 @@ function renderAll() {
   renderWorkouts();
   if (typeof renderDailyWorkoutLog === "function") renderDailyWorkoutLog();
   renderProgram();
+  renderCleaning();
 }
 
 // ──────────────────────────────────────────
@@ -4617,6 +4706,7 @@ function switchView(v) {
   document.querySelector(`[data-view="${v}"]`).classList.add('active');
   if (v === 'notes') renderPastNotes();
   if (v === 'program') renderProgram();
+  if (v === 'cleaning') renderCleaning();
   if (v === 'consistency') renderConsistency();
   if (v === 'weekly') { refreshWeekView(); renderWorkouts(); }
   if (v === 'monthly') { refreshMonthView(); renderMonthlyReading(); }
@@ -4691,15 +4781,90 @@ function importProgram(inputEl) {
   inputEl.value = '';
 }
 
-function logProgramInput(el) {
-  var key = el.getAttribute('data-k');
-  var field = el.getAttribute('data-f');
+// One log entry per exercise: w = weight text, r = reps/RPE text, d = bitmask of completed sets.
+function updateProgramLog(key, mutate) {
   if (!S.workoutProgramLog) S.workoutProgramLog = {};
   var cur = Object.assign({}, S.workoutProgramLog[key]);
-  cur[field] = el.value.trim();
-  if (!cur.w && !cur.r) delete S.workoutProgramLog[key];
-  else S.workoutProgramLog[key] = cur;
+  mutate(cur);
+  if (!cur.w) delete cur.w;
+  if (!cur.r) delete cur.r;
+  if (!cur.d) delete cur.d;
+  if (Object.keys(cur).length) S.workoutProgramLog[key] = cur;
+  else delete S.workoutProgramLog[key];
   save();
+}
+
+function logProgramInput(el) {
+  var field = el.getAttribute('data-f');
+  updateProgramLog(el.getAttribute('data-k'), function(cur) { cur[field] = el.value.trim(); });
+}
+
+function programSetCount(e) {
+  var n = parseInt(e.s, 10);
+  return (n >= 1 && n <= 10) ? n : 1;
+}
+
+function programExDone(wkNum, di, ei, e) {
+  var c = (S.workoutProgramLog || {})['w' + wkNum + '-d' + di + '-e' + ei];
+  var full = (1 << programSetCount(e)) - 1;
+  return !!c && ((c.d || 0) & full) === full;
+}
+
+function programDayDoneCount(wkNum, day, di) {
+  var n = 0;
+  (day.ex || []).forEach(function(e, ei) { if (programExDone(wkNum, di, ei, e)) n++; });
+  return n;
+}
+
+function programWeekSessions(week) {
+  var wkNum = parseInt(week.n, 10), done = 0;
+  (week.days || []).forEach(function(day, di) {
+    var total = (day.ex || []).length;
+    if (total && programDayDoneCount(wkNum, day, di) === total) done++;
+  });
+  return done;
+}
+
+function toggleProgramSet(btn) {
+  var dayEl = btn.closest('.pg-day');
+  var wasDone = dayEl.classList.contains('done');
+  var i = parseInt(btn.getAttribute('data-i'), 10);
+  updateProgramLog(btn.getAttribute('data-k'), function(cur) { cur.d = (cur.d || 0) ^ (1 << i); });
+  btn.classList.toggle('on');
+  updateProgramProgress();
+  if (!wasDone && dayEl.classList.contains('done')) burstConfetti();
+}
+
+// Refresh completion states in place (no re-render, so open cards and scroll position stay put).
+function updateProgramProgress() {
+  var p = getProgram();
+  if (!p) return;
+  var wkNum = currentProgramWeek(p);
+  var week = p.weeks.filter(function(w) { return parseInt(w.n, 10) === wkNum; })[0];
+  var dayEls = document.querySelectorAll('#program-body .pg-day');
+  (week.days || []).forEach(function(day, di) {
+    var dayEl = dayEls[di];
+    if (!dayEl) return;
+    var exEls = dayEl.querySelectorAll('.pg-ex');
+    var total = (day.ex || []).length;
+    (day.ex || []).forEach(function(e, ei) {
+      if (exEls[ei]) exEls[ei].classList.toggle('done', programExDone(wkNum, di, ei, e));
+    });
+    var done = programDayDoneCount(wkNum, day, di);
+    dayEl.classList.toggle('done', total > 0 && done === total);
+    var chip = dayEl.querySelector('.pg-prog');
+    if (chip) chip.textContent = done + '/' + total;
+  });
+  var sessions = programWeekSessions(week);
+  var totalDays = (week.days || []).length;
+  var count = document.getElementById('pg-hero-count');
+  if (count) count.textContent = sessions + ' of ' + totalDays + ' sessions done';
+  var bar = document.getElementById('pg-hero-bar');
+  if (bar) bar.style.width = (totalDays ? Math.round(100 * sessions / totalDays) : 0) + '%';
+  document.querySelectorAll('#program-body .pg-week-btn').forEach(function(b, i) {
+    var w = p.weeks[i];
+    b.classList.toggle('done', !!w && (w.days || []).length > 0 && programWeekSessions(w) === w.days.length);
+  });
 }
 
 function programExClass(pattern) {
@@ -4734,17 +4899,25 @@ function programDayHtml(wkNum, day, di, isToday) {
     + '<span class="pg-loc ' + programLocClass(day.loc) + '">' + escHtml(day.loc) + '</span>'
     + '<span class="pg-day-title">' + escHtml(day.title) + '</span>'
     + (day.cap ? '<span class="pg-day-cap">' + escHtml(String(day.cap).replace(/\s*\(.*\)/, '')) + '</span>' : '')
+    + '<span class="pg-prog">0/' + (day.ex || []).length + '</span>'
     + '</summary>';
   var log = S.workoutProgramLog || {};
   (day.ex || []).forEach(function(e, ei) {
     var key = 'w' + wkNum + '-d' + di + '-e' + ei;
     var cur = log[key] || {};
     var prev = log['w' + (wkNum - 1) + '-d' + di + '-e' + ei] || {};
+    var nSets = programSetCount(e);
+    var setsHtml = '';
+    for (var si = 0; si < nSets; si++) {
+      setsHtml += '<button type="button" class="pg-set' + ((cur.d || 0) & (1 << si) ? ' on' : '') + '" data-k="' + key + '" data-i="' + si + '" aria-label="Set ' + (si + 1) + ' done" onclick="toggleProgramSet(this)">'
+        + (nSets === 1 ? '<i class="ti ti-check" aria-hidden="true"></i>' : (si + 1)) + '</button>';
+    }
     h += '<div class="pg-ex ' + programExClass(e.p) + '">'
       + (e.p ? '<div class="pg-ex-pattern">' + escHtml(e.p) + '</div>' : '')
       + '<div class="pg-ex-name">' + escHtml(e.n) + '</div>'
       + '<div class="pg-ex-meta">' + programMeta(e) + '</div>'
       + (e.c ? '<div class="pg-ex-cue">' + escHtml(e.c) + '</div>' : '')
+      + '<div class="pg-sets"><span class="pg-sets-label">' + (nSets === 1 ? 'Done' : 'Sets') + '</span>' + setsHtml + '</div>'
       + '<div class="pg-log">'
       + '<input type="text" autocomplete="off" aria-label="Weight used" data-k="' + key + '" data-f="w" value="' + escHtml(cur.w) + '" placeholder="' + escHtml(prev.w ? 'Weight · last wk ' + prev.w : 'Weight used') + '" onchange="logProgramInput(this)">'
       + '<input type="text" autocomplete="off" aria-label="Reps or RPE done" data-k="' + key + '" data-f="r" value="' + escHtml(cur.r) + '" placeholder="' + escHtml(prev.r ? 'Reps/RPE · last wk ' + prev.r : 'Reps / RPE done') + '" onchange="logProgramInput(this)">'
@@ -4827,10 +5000,13 @@ function renderProgram() {
   });
   h += '</div>';
 
-  h += '<div class="pg-week-head"><div class="pg-week-kicker">Week ' + wkNum + ' of ' + p.weeks.length + '</div>'
+  h += '<div class="pg-hero"><div class="pg-week-kicker">Week ' + wkNum + ' of ' + p.weeks.length + '</div>'
     + '<div class="pg-week-block">' + escHtml(week.block) + '</div>'
     + (week.focus ? '<div class="pg-week-focus">' + escHtml(week.focus) + '</div>' : '')
     + (week.vpush ? '<div class="pg-week-focus"><b>Vertical push:</b> ' + escHtml(week.vpush) + '</div>' : '')
+    + '<div class="pg-hero-bar"><span id="pg-hero-bar"></span></div>'
+    + '<div class="pg-hero-foot"><span id="pg-hero-count"></span>'
+    + '<span class="pg-legend"><i class="priority"></i>Priority<i class="power"></i>Power / cardio<i class="core"></i>Core</span></div>'
     + '</div>';
 
   h += '<div class="stack">';
@@ -4841,6 +5017,161 @@ function renderProgram() {
 
   h += programGuideHtml(p);
   h += '<div style="margin-top:14px;text-align:center;"><button class="icon-btn" style="width:auto;padding:0 14px;font-size:12px;" onclick="pickProgramFile()">Replace program file</button></div>';
+  el.innerHTML = h;
+  updateProgramProgress();
+}
+
+// ──────────────────────────────────────────
+// CLEANING GUIDE ("Home Reset")
+// Checks live in S.cleaningChecks, keyed so they reset on their own schedule:
+//   d|YYYY-MM-DD|i  daily reset      w|YYYY-MM-DD|i  that weekday's block (this week)
+//   m|YYYY-MM|b|i   monthly block    q|YYYY-MM|g|i   quarterly group (this month)
+// Nothing is deleted at rollover: a new day/week/month just reads different keys.
+// ──────────────────────────────────────────
+var CLEANING = {
+  daily: { title: 'Daily Reset', mins: 10, items: ['Dishes done', 'Wipe counters and stove', 'Make the bed', '5-minute tidy', 'Wipe bathroom sink'] },
+  weekly: [
+    { day: 'Mon', mins: 20, title: 'Kitchen', items: ['Counters and stove', 'Scrub the sink', 'Microwave inside', 'Appliance fronts', 'Trash and recycling out'] },
+    { day: 'Tue', mins: 15, title: 'Bathroom', items: ['Toilet, seat and base', 'Sink and vanity', 'Mirror', 'Restock TP and soap'] },
+    { day: 'Wed', mins: 30, title: 'Laundry', items: ['Wash', 'Dry', 'Fold', 'Put it all away'] },
+    { day: 'Thu', mins: 25, title: 'Kitchen', items: ['Counters and sink', 'Polish stainless steel', 'Toss old leftovers', 'Spot-mop the floor'] },
+    { day: 'Fri', mins: 20, title: 'Bathroom', items: ['Tub and shower walls', 'Clear the drain', 'Bathroom floor', 'Fresh towels and mat'] },
+    { day: 'Sat', mins: 40, title: 'Bedroom', items: ['Change the sheets', 'Wash sheets and towels', 'Tidy all surfaces', 'Vacuum the bedroom', 'Put everything away'] },
+    { day: 'Sun', mins: 40, title: 'Floors + Couch', items: ['Vacuum floors and rugs', 'Clean the couch', 'Mop kitchen and bath', 'Fridge check'] }
+  ],
+  monthly: [
+    { title: 'Dust', items: ['Shelves and baseboards', 'Blinds and vents', 'Light fixtures', 'Disinfect switches, knobs'] },
+    { title: 'Fridge + Kitchen', items: ['Fridge shelves and seals', 'Microwave deep clean', 'Range hood filter', 'Cabinet fronts'] },
+    { title: 'Machines', items: ['Dishwasher filter + cycle', 'Washer cycle + gasket', 'Detergent drawer', 'Flush the drains'] },
+    { title: 'Soft Goods + Glass', items: ['Bath mat and liner', 'Vacuum the mattress', 'Wash throw blankets', 'Windows and mirrors'] }
+  ],
+  quarterly: [
+    { months: ['Jan', 'Apr', 'Jul', 'Oct'], title: 'Appliances', items: ['Deep clean the oven', 'Washer drain filter', 'Dryer lint housing', 'Fridge coils', 'Descale the kettle'] },
+    { months: ['Feb', 'May', 'Aug', 'Nov'], title: 'Air + Safety', items: ['ERV filters', 'HVAC filter check', 'Bath exhaust fan cover', 'Test smoke and CO alarms', 'Check under sinks'] },
+    { months: ['Mar', 'Jun', 'Sep', 'Dec'], title: 'Bedroom + Bath', items: ['Rotate the mattress', 'Wash pillows and duvet', 'Descale the showerhead', 'Check caulk and grout', 'Closet edit'] }
+  ]
+};
+var CLEAN_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var _cleanTab = 'today';
+
+function cleanDateKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function cleanMonthKey(d) { return cleanDateKey(d).slice(0, 7); }
+function cleanDowIdx(d) { return (d.getDay() + 6) % 7; }
+function cleanMonthBlock(d) { var n = d.getDate(); return n <= 7 ? 0 : (n <= 14 ? 1 : (n <= 21 ? 2 : 3)); }
+
+function cleanDone(prefix, count) {
+  var checks = S.cleaningChecks || {}, n = 0;
+  for (var i = 0; i < count; i++) if (checks[prefix + '|' + i]) n++;
+  return n;
+}
+
+function setCleanTab(el) {
+  _cleanTab = el.getAttribute('data-tab');
+  renderCleaning();
+}
+
+function toggleClean(el) {
+  if (!S.cleaningChecks) S.cleaningChecks = {};
+  var key = el.getAttribute('data-k');
+  if (el.checked) S.cleaningChecks[key] = true;
+  else delete S.cleaningChecks[key];
+  save();
+  var card = el.closest('.cl-card');
+  var boxes = card ? card.querySelectorAll('input[type=checkbox]') : [];
+  if (el.checked && boxes.length && Array.prototype.every.call(boxes, function(b) { return b.checked; })) burstConfetti();
+  renderCleaning();
+}
+
+// opts: cls, topLeft, topRight, title, prefix, items, disabled
+function cleanCardHtml(o) {
+  var done = o.disabled ? 0 : cleanDone(o.prefix, o.items.length);
+  var h = '<div class="cl-card ' + (o.cls || '') + '"><div class="cl-card-top"><span>' + escHtml(o.topLeft) + '</span><span>'
+    + (o.topRight ? escHtml(o.topRight) + ' ' : '') + (o.disabled ? '' : cleanChip(done, o.items.length)) + '</span></div>'
+    + '<div class="cl-card-title">' + escHtml(o.title) + '</div>';
+  o.items.forEach(function(text, i) {
+    var key = o.prefix + '|' + i;
+    h += '<label class="cl-item"><input type="checkbox" data-k="' + key + '"' + (o.disabled ? ' disabled' : '')
+      + ((S.cleaningChecks || {})[key] ? ' checked' : '') + ' onchange="toggleClean(this)"><span class="cl-box"></span><span class="cl-text">' + escHtml(text) + '</span></label>';
+  });
+  return h + '</div>';
+}
+
+function cleanChip(done, total) {
+  return '<span class="cl-chip' + (done === total ? ' full' : '') + '">' + done + '/' + total + '</span>';
+}
+
+function renderCleaning() {
+  var el = document.getElementById('cleaning-body');
+  if (!el) return;
+  var now = new Date();
+  var idx = cleanDowIdx(now);
+  var todayK = cleanDateKey(now);
+  var monthK = cleanMonthKey(now);
+  var block = CLEANING.weekly[idx];
+  var mBlock = cleanMonthBlock(now);
+  var qGroup = now.getMonth() % 3;
+  var C = CLEANING;
+
+  var dailyDone = cleanDone('d|' + todayK, C.daily.items.length);
+  var blockDone = cleanDone('w|' + todayK, block.items.length);
+  var total = C.daily.items.length + block.items.length;
+  var done = dailyDone + blockDone;
+  var pct = total ? done / total : 0;
+  var circ = 2 * Math.PI * 28;
+
+  var h = '<div class="cl-hero"><div class="cl-ring' + (done === total ? ' full' : '') + '">'
+    + '<svg viewBox="0 0 68 68"><circle class="bg" cx="34" cy="34" r="28"></circle><circle class="fg" cx="34" cy="34" r="28" stroke-dasharray="' + circ.toFixed(1) + '" stroke-dashoffset="' + (circ * (1 - pct)).toFixed(1) + '"></circle></svg>'
+    + '<span>' + done + '/' + total + '</span></div>'
+    + '<div><div class="cl-hero-kicker">Today · ' + block.day + ', ' + CLEAN_MONTHS[now.getMonth()] + ' ' + now.getDate() + '</div>'
+    + '<div class="cl-hero-title">' + (done === total ? 'All done. Go enjoy your clean home.' : escHtml(block.title) + ' day') + '</div>'
+    + '<div class="cl-hero-sub">' + escHtml(block.title) + ' ' + block.mins + ' min + Daily Reset ' + C.daily.mins + ' min</div></div></div>';
+
+  var tabs = [['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['quarter', 'Quarter']];
+  h += '<div class="cl-tabs">';
+  tabs.forEach(function(t) {
+    h += '<button class="cl-tab' + (t[0] === _cleanTab ? ' active' : '') + '" data-tab="' + t[0] + '" onclick="setCleanTab(this)">' + t[1] + '</button>';
+  });
+  h += '</div>';
+
+  var dailyCard = cleanCardHtml({ cls: 'daily', topLeft: 'Every day', topRight: C.daily.mins + ' min', title: C.daily.title, prefix: 'd|' + todayK, items: C.daily.items });
+
+  if (_cleanTab === 'today') {
+    h += '<div class="cl-grid">' + dailyCard
+      + cleanCardHtml({ cls: 'today', topLeft: block.day, topRight: block.mins + ' min', title: block.title, prefix: 'w|' + todayK, items: block.items }) + '</div>';
+    var mb = C.monthly[mBlock], mDone = cleanDone('m|' + monthK + '|' + mBlock, mb.items.length);
+    var qg = C.quarterly[qGroup], qDone = cleanDone('q|' + monthK + '|' + qGroup, qg.items.length);
+    h += '<div class="cl-nudges">'
+      + '<button class="cl-nudge" data-tab="month" onclick="setCleanTab(this)"><span class="grow"><b>This weekend’s extra: ' + escHtml(mb.title) + '</b><small>Monthly block, week ' + (mBlock + 1) + '</small></span>' + cleanChip(mDone, mb.items.length) + '</button>'
+      + '<button class="cl-nudge" data-tab="quarter" onclick="setCleanTab(this)"><span class="grow"><b>This month’s deep clean: ' + escHtml(qg.title) + '</b><small>Quarterly, ' + qg.months.join(' · ') + '</small></span>' + cleanChip(qDone, qg.items.length) + '</button>'
+      + '</div>';
+  } else if (_cleanTab === 'week') {
+    var monday = new Date(now); monday.setDate(now.getDate() - idx);
+    h += '<div class="cl-grid">';
+    C.weekly.forEach(function(d, i) {
+      var date = new Date(monday); date.setDate(monday.getDate() + i);
+      var k = cleanDateKey(date);
+      h += cleanCardHtml({ cls: i === idx ? 'today' : '', topLeft: d.day + ' · ' + CLEAN_MONTHS[date.getMonth()] + ' ' + date.getDate(), topRight: d.mins + ' min', title: d.title, prefix: 'w|' + k, items: d.items });
+    });
+    h += dailyCard + '</div>';
+  } else if (_cleanTab === 'month') {
+    h += '<div class="cl-grid">';
+    C.monthly.forEach(function(m, i) {
+      h += cleanCardHtml({ cls: 'month' + (i === mBlock ? ' today' : ''), topLeft: 'Week ' + (i + 1), topRight: i === mBlock ? 'This week' : '', title: m.title, prefix: 'm|' + monthK + '|' + i, items: m.items });
+    });
+    h += '</div>';
+  } else {
+    h += '<div class="cl-grid">';
+    C.quarterly.forEach(function(g, i) {
+      var current = i === qGroup;
+      var nextIdx = (now.getMonth() + ((i - qGroup + 3) % 3)) % 12;
+      h += cleanCardHtml({ cls: 'month' + (current ? ' today' : ' dim'), topLeft: g.months.join(' · '), topRight: current ? 'This month' : 'Next: ' + CLEAN_MONTHS[nextIdx], title: g.title, prefix: 'q|' + monthK + '|' + i, items: g.items, disabled: !current });
+    });
+    h += '</div>';
+  }
+
+  h += '<div class="cl-foot">Missed a day? Skip it. The next cycle catches it.</div>';
   el.innerHTML = h;
 }
 
