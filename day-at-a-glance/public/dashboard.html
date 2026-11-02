@@ -2394,6 +2394,19 @@
   .pg-set.on { background:var(--sage-mid); border-color:var(--sage-mid); color:#fff; }
   .pg-ex.done .pg-ex-name { color:var(--ink3); text-decoration:line-through; text-decoration-color:var(--cream-dark); }
   .pg-ex.done .pg-ex-cue, .pg-ex.done .pg-ex-pattern { opacity:0.6; }
+  .pg-daily { margin-bottom:14px; padding:14px 16px; background:linear-gradient(135deg, var(--sage-soft) 0%, var(--blush-soft) 100%); border:1px solid var(--sage-light); border-radius:var(--r-lg); }
+  .pg-daily.done { border-color:var(--sage-mid); }
+  .pg-daily.rest { background:var(--blush-soft); border-color:var(--blush); }
+  .pg-daily-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .pg-daily-kicker { font-size:10.5px; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink3); }
+  .pg-daily-title { font-family:var(--font-display); font-size:20px; font-weight:500; color:var(--ink); line-height:1.2; margin-top:4px; }
+  .pg-daily-sub { font-size:13px; color:var(--ink2); margin-top:3px; }
+  .pg-daily .pg-prog { margin-left:0; }
+  .pg-daily.done .pg-prog { background:var(--sage); color:#fff; }
+  .pg-daily-log { margin-top:10px; font-size:12px; color:var(--ink2); }
+  .pg-daily-ex { display:flex; justify-content:space-between; gap:12px; padding:4px 0; border-top:1px solid rgba(255,255,255,0.7); }
+  .pg-daily-ex span:last-child { font-family:var(--font-mono); font-size:11px; color:var(--sage); text-align:right; }
+  .pg-daily-btn { margin-top:12px; }
   .pg-week-kicker { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink3); }
   .pg-week-block { font-family:var(--font-display); font-size:26px; font-weight:500; color:var(--ink); line-height:1.15; margin-top:2px; }
   .pg-week-focus { font-size:13px; color:var(--ink2); margin-top:4px; line-height:1.5; }
@@ -4707,6 +4720,7 @@ function switchView(v) {
   if (v === 'notes') renderPastNotes();
   if (v === 'program') renderProgram();
   if (v === 'cleaning') renderCleaning();
+  if (v === 'daily') renderDailyWorkoutLog();
   if (v === 'consistency') renderConsistency();
   if (v === 'weekly') { refreshWeekView(); renderWorkouts(); }
   if (v === 'monthly') { refreshMonthView(); renderMonthlyReading(); }
@@ -4829,10 +4843,117 @@ function toggleProgramSet(btn) {
   var dayEl = btn.closest('.pg-day');
   var wasDone = dayEl.classList.contains('done');
   var i = parseInt(btn.getAttribute('data-i'), 10);
-  updateProgramLog(btn.getAttribute('data-k'), function(cur) { cur.d = (cur.d || 0) ^ (1 << i); });
+  var key = btn.getAttribute('data-k');
+  updateProgramLog(key, function(cur) { cur.d = (cur.d || 0) ^ (1 << i); });
   btn.classList.toggle('on');
   updateProgramProgress();
-  if (!wasDone && dayEl.classList.contains('done')) burstConfetti();
+  var nowDone = dayEl.classList.contains('done');
+  if (wasDone !== nowDone) {
+    var m = /^w(\d+)-d(\d+)-e/.exec(key);
+    syncProgramSession(parseInt(m[1], 10), parseInt(m[2], 10), nowDone);
+  }
+  if (!wasDone && nowDone) burstConfetti();
+}
+
+// ── Program <-> daily workout sync ──
+// A finished program session is stamped with its date (log key 'w{week}-d{day}', no '-e')
+// and mirrored into S.workouts, so the main page, weekly grid and monthly goal count it.
+function programSessionTypes(day) {
+  var t = String(day.title || '').toLowerCase(), want = [];
+  if (t.indexOf('full body') === 0) want.push('upper body', 'lower body');
+  else if (t.indexOf('upper') === 0) want.push('upper body');
+  else if (t.indexOf('lower') === 0) want.push('lower body');
+  if (t.indexOf('hiit') !== -1) want.push('hiit cardio');
+  var known = getWoTypes().map(function(x) { return x.name; });
+  return want.filter(function(n) { return known.indexOf(n) !== -1; });
+}
+
+// Deterministic (not uid()): two devices finishing the same session converge on one entry when synced.
+function programWorkoutId(dateKey, type) {
+  var h = 0;
+  for (var i = 0; i < type.length; i++) h = (h * 31 + type.charCodeAt(i)) % 1000003;
+  return daysSinceEpoch(dateKey) * 1000003 + h;
+}
+
+function syncProgramSession(wkNum, di, complete) {
+  var p = getProgram();
+  if (!p) return;
+  var week = p.weeks.filter(function(w) { return parseInt(w.n, 10) === wkNum; })[0];
+  var day = week && week.days && week.days[di];
+  if (!day) return;
+  var sk = 'w' + wkNum + '-d' + di;
+  if (!S.workoutProgramLog) S.workoutProgramLog = {};
+  if (!S.workouts) S.workouts = [];
+  var cur = S.workoutProgramLog[sk];
+  if (complete) {
+    var date = (cur && cur.date) || todayKey();
+    S.workoutProgramLog[sk] = { date: date };
+    programSessionTypes(day).forEach(function(type) {
+      var has = S.workouts.some(function(w) { return w.date === date && w.type === type; });
+      if (!has) S.workouts.push({ id: programWorkoutId(date, type), date: date, type: type, ps: sk });
+    });
+  } else if (cur) {
+    S.workouts = S.workouts.filter(function(w) { return w.ps !== sk; });
+    delete S.workoutProgramLog[sk];
+  }
+  save();
+  renderDailyWorkoutLog();
+  renderWorkouts();
+}
+
+function programSessionOnDate(dateKey) {
+  var log = S.workoutProgramLog || {};
+  for (var k in log) {
+    var m = /^w(\d+)-d(\d+)$/.exec(k);
+    if (m && log[k] && log[k].date === dateKey) return { wk: parseInt(m[1], 10), di: parseInt(m[2], 10) };
+  }
+  return null;
+}
+
+function openProgramSession(wk, di) {
+  S.settings.programWeek = wk;
+  save();
+  switchView('program');
+  var el = document.querySelectorAll('#program-body .pg-day')[di];
+  if (el) { el.open = true; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+
+// The program card at the top of "Today's workout" on the main page.
+function programDailyCardHtml(dateKey) {
+  var p = getProgram();
+  if (!p) return '';
+  var ref = programSessionOnDate(dateKey);
+  if (!ref && dateKey === todayKey()) {
+    var wk = currentProgramWeek(p);
+    var week = p.weeks.filter(function(w) { return parseInt(w.n, 10) === wk; })[0];
+    var abbr = PROGRAM_DOW[new Date(dateKey + 'T12:00:00').getDay()];
+    var di = (week.days || []).map(function(d) { return String(d.day).toLowerCase().slice(0, 3); }).indexOf(abbr.toLowerCase());
+    if (di !== -1) ref = { wk: wk, di: di };
+    else {
+      var rest = (p.schedule || []).filter(function(s) { return s.day === abbr; })[0];
+      return rest ? '<div class="pg-daily rest"><div class="pg-daily-kicker">Program · rest day</div><div class="pg-daily-sub">' + escHtml(rest.focus) + '</div></div>' : '';
+    }
+  }
+  if (!ref) return '';
+  var wkObj = p.weeks.filter(function(w) { return parseInt(w.n, 10) === ref.wk; })[0];
+  var day = wkObj && wkObj.days && wkObj.days[ref.di];
+  if (!day) return '';
+  var total = (day.ex || []).length;
+  var done = programDayDoneCount(ref.wk, day, ref.di);
+  var complete = total > 0 && done === total;
+  var log = S.workoutProgramLog || {};
+  var logged = [];
+  (day.ex || []).forEach(function(e, ei) {
+    var c = log['w' + ref.wk + '-d' + ref.di + '-e' + ei];
+    if (c && (c.w || c.r)) logged.push('<div class="pg-daily-ex"><span>' + escHtml(e.n) + '</span><span>' + escHtml([c.w, c.r].filter(Boolean).join(' · ')) + '</span></div>');
+  });
+  return '<div class="pg-daily' + (complete ? ' done' : '') + '">'
+    + '<div class="pg-daily-top"><span class="pg-daily-kicker">Program · Week ' + ref.wk + ' · ' + escHtml(day.day) + '</span><span class="pg-prog">' + (complete ? '✓ ' : '') + done + '/' + total + '</span></div>'
+    + '<div class="pg-daily-title">' + escHtml(day.title) + '</div>'
+    + '<div class="pg-hero-bar" style="margin-top:10px;"><span style="width:' + (total ? Math.round(100 * done / total) : 0) + '%"></span></div>'
+    + (logged.length ? '<div class="pg-daily-log">' + logged.join('') + '</div>' : '')
+    + '<button class="btn-add pg-daily-btn" onclick="openProgramSession(' + ref.wk + ',' + ref.di + ')">' + (complete ? 'View session' : (done ? 'Continue session' : 'Start session')) + '</button>'
+    + '</div>';
 }
 
 // Refresh completion states in place (no re-render, so open cards and scroll position stay put).
@@ -6359,7 +6480,13 @@ function renderDailyWorkoutLog() {
 
   // Recent history
   var hist = '';
-  var pastDays = Object.keys(S.workoutLogs || {}).filter(function(k) { return S.workoutLogs[k] && k !== dk; }).sort().reverse().slice(0, 5);
+  var programDays = [];
+  Object.keys(S.workoutProgramLog || {}).forEach(function(k) {
+    var c = S.workoutProgramLog[k];
+    if (/^w\d+-d\d+$/.test(k) && c && c.date) programDays.push(c.date);
+  });
+  var pastDays = Object.keys(S.workoutLogs || {}).filter(function(k) { return S.workoutLogs[k]; }).concat(programDays)
+    .filter(function(k, i, a) { return k !== dk && a.indexOf(k) === i; }).sort().reverse().slice(0, 5);
   if (pastDays.length) {
     hist = '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--cream-dark);">';
     hist += '<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:8px;">Recent workouts</div>';
@@ -6370,17 +6497,22 @@ function renderDailyWorkoutLog() {
       var tags = dw.map(function(w) {
         return '<span style="font-size:10px;padding:2px 8px;border-radius:10px;color:white;font-weight:500;background:' + getWoTypeColor(w.type) + ';">' + escHtml(w.type) + '</span>';
       }).join(' ');
-      var preview = (S.workoutLogs[d2] || '').slice(0, 120);
+      var preview = ((S.workoutLogs || {})[d2] || '').slice(0, 120);
+      var pref = programSessionOnDate(d2);
+      var pday = pref && getProgram() && getProgram().weeks.filter(function(w) { return parseInt(w.n, 10) === pref.wk; })[0];
+      pday = pday && pday.days && pday.days[pref.di];
+      var pline = pday ? '<div style="font-size:11.5px;color:var(--sage);margin:3px 0;"><i class="ti ti-barbell" aria-hidden="true"></i> Program · Week ' + pref.wk + ' · ' + escHtml(pday.title) + '</div>' : '';
       hist += '<div style="padding:8px 0;border-bottom:1px solid var(--cream-mid);">'
         + '<div style="font-size:11px;font-family:var(--font-mono);color:var(--ink3);">' + lbl + '</div>'
         + (tags ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:3px 0;">' + tags + '</div>' : '')
+        + pline
         + '<div style="font-size:12px;color:var(--ink2);line-height:1.5;white-space:pre-wrap;">' + escHtml(preview) + '</div>'
         + '</div>';
     });
     hist += '</div>';
   }
 
-  el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' + btns + '</div>' + ta + hist;
+  el.innerHTML = programDailyCardHtml(dk) + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' + btns + '</div>' + ta + hist;
 }
 
 function toggleDailyWoType(dk, type) {
