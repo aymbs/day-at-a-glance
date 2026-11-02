@@ -2361,6 +2361,58 @@
   }
 
   .save-settings-btn:hover { background: var(--sage-mid); }
+
+  /* ── WORKOUT PROGRAM ── */
+  .pg-today { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 16px; margin-bottom:14px; background:var(--sage-soft); border:1px solid var(--sage-light); border-radius:var(--r-lg); font-size:13.5px; color:var(--sage); }
+  .pg-today i { font-size:17px; }
+  .pg-today.rest { background:var(--blush-soft); border-color:var(--blush); color:var(--blush-deep); }
+  .pg-weeks { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .pg-week-btn { font-family:var(--font-body); font-size:13px; font-weight:500; min-width:42px; padding:7px 12px; border-radius:20px; border:1px solid var(--cream-dark); background:var(--white); color:var(--ink2); cursor:pointer; }
+  .pg-week-btn:hover { border-color:var(--sage-light); }
+  .pg-week-btn.active { background:var(--sage); border-color:var(--sage); color:#fff; }
+  .pg-week-head { margin-bottom:16px; }
+  .pg-week-kicker { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink3); }
+  .pg-week-block { font-family:var(--font-display); font-size:26px; font-weight:500; color:var(--ink); line-height:1.15; margin-top:2px; }
+  .pg-week-focus { font-size:13px; color:var(--ink2); margin-top:4px; line-height:1.5; }
+  .pg-day summary { list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .pg-day summary::-webkit-details-marker { display:none; }
+  .pg-day[open] > summary { border-bottom:1px solid var(--cream-mid); }
+  .pg-day-name { font-family:var(--font-mono); font-size:12px; font-weight:500; color:var(--ink3); min-width:34px; }
+  .pg-day-title { flex:1; min-width:160px; font-size:14px; font-weight:500; color:var(--ink); }
+  .pg-day-cap { font-family:var(--font-mono); font-size:11px; color:var(--ink3); white-space:nowrap; }
+  .pg-day.is-today { border-color:var(--sage-light); }
+  .pg-loc { font-size:10px; font-weight:600; letter-spacing:0.08em; padding:3px 8px; border-radius:20px; }
+  .pg-loc.gym { background:var(--sage-soft); color:var(--sage); }
+  .pg-loc.home { background:var(--blush-soft); color:var(--blush-deep); }
+  .pg-loc.rest { background:var(--cream-mid); color:var(--ink2); }
+  .pg-ex { padding:13px 18px 14px; border-bottom:1px solid var(--cream-mid); border-left:3px solid transparent; }
+  .pg-ex:last-child { border-bottom:none; }
+  .pg-ex.priority { border-left-color:var(--gold); }
+  .pg-ex.power { border-left-color:var(--sage-light); }
+  .pg-ex.core { border-left-color:var(--cream-dark); }
+  .pg-ex-pattern { font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink3); margin-bottom:3px; }
+  .pg-ex-name { font-size:14px; font-weight:500; color:var(--ink); line-height:1.35; }
+  .pg-ex-meta { display:flex; flex-wrap:wrap; gap:3px 14px; font-family:var(--font-mono); font-size:11.5px; color:var(--sage); margin-top:5px; }
+  .pg-ex-cue { font-size:12px; color:var(--ink3); line-height:1.5; margin-top:6px; }
+  .pg-log { display:flex; gap:8px; margin-top:10px; }
+  .pg-log input { flex:1; min-width:0; font-family:var(--font-body); font-size:13px; padding:7px 10px; border:1px solid var(--cream-dark); border-radius:var(--r-sm); background:var(--cream); color:var(--ink); outline:none; }
+  .pg-log input:focus { border-color:var(--sage-mid); }
+  .pg-log input::placeholder { color:var(--ink3); }
+  .pg-guide > summary { list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:center; gap:8px; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink3); }
+  .pg-guide > summary::-webkit-details-marker { display:none; }
+  .pg-guide > summary i { font-size:15px; color:var(--sage-mid); }
+  .pg-guide[open] > summary { border-bottom:1px solid var(--cream-mid); }
+  .pg-sec-title { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink3); margin:18px 0 8px; }
+  .pg-sec-title:first-child { margin-top:0; }
+  .pg-p { font-size:13.5px; color:var(--ink2); line-height:1.6; margin-bottom:8px; }
+  .pg-row { display:flex; gap:10px; align-items:baseline; padding:7px 0; border-bottom:1px solid var(--cream-mid); font-size:13px; color:var(--ink); flex-wrap:wrap; }
+  .pg-row:last-child { border-bottom:none; }
+  .pg-row .k { font-family:var(--font-mono); font-size:11.5px; color:var(--ink3); min-width:44px; }
+  .pg-row .grow { flex:1; min-width:150px; }
+  .pg-row .m { font-family:var(--font-mono); font-size:11.5px; color:var(--sage); }
+  .pg-note-title { font-size:13.5px; font-weight:500; color:var(--ink); margin-top:10px; }
+  .pg-list { margin:0 0 4px 18px; font-size:13.5px; color:var(--ink2); line-height:1.6; }
+  .pg-list li { margin-bottom:3px; }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -2395,6 +2447,11 @@
   </div>
   <div class="nav-item" onclick="switchView('focus')" data-view="focus">
     <i class="ti ti-clock" aria-hidden="true"></i> <span>Focus</span>
+  </div>
+
+  <div class="nav-section-label">Guides</div>
+  <div class="nav-item" onclick="switchView('program')" data-view="program">
+    <i class="ti ti-barbell" aria-hidden="true"></i> <span>Workout</span>
   </div>
 
   <div class="nav-section-label">Config</div>
@@ -2719,6 +2776,16 @@
     </div>
   </div>
 
+  <!-- ── WORKOUT PROGRAM ── -->
+  <div id="view-program" class="view">
+    <div class="page-header">
+      <h2>Workout program</h2>
+      <div class="sub" id="program-sub">Your training plan, always in your pocket.</div>
+    </div>
+    <div id="program-body"></div>
+    <input type="file" id="program-file-input" accept=".json,application/json" style="display:none" onchange="importProgram(this)">
+  </div>
+
   <!-- ── SETTINGS ── -->
   <div id="view-settings" class="view">
     <div class="page-header">
@@ -2904,6 +2971,8 @@ function defaultState() {
 
     books: [],
     workouts: [],
+    guides: {},
+    workoutProgramLog: {},
 
   };
 }
@@ -2948,7 +3017,10 @@ function save() {
     var json = JSON.stringify(S);
     localStorage.setItem(STORE_KEY, json);
     // Rolling daily backup: overwritten throughout the day, frozen once the date changes.
-    localStorage.setItem(BACKUP_PREFIX + todayKey(), json);
+    // Guide content (imported programs) is large and static, so it stays out of the 30
+    // daily copies to protect the localStorage quota; restoreBackup() re-attaches it.
+    var hasGuides = S.guides && Object.keys(S.guides).length;
+    localStorage.setItem(BACKUP_PREFIX + todayKey(), hasGuides ? JSON.stringify(Object.assign({}, S, { guides: {} })) : json);
     pruneOldBackups();
   } catch(e) {}
 }
@@ -2995,7 +3067,10 @@ function restoreBackup() {
   try {
     var raw = localStorage.getItem(BACKUP_PREFIX + d);
     if (!raw) { alert('That backup could not be found.'); return; }
-    localStorage.setItem(STORE_KEY, raw);
+    // Backups omit guides; keep the current ones, or sync would read their absence as a deletion.
+    var restored = JSON.parse(raw);
+    restored.guides = S.guides || {};
+    localStorage.setItem(STORE_KEY, JSON.stringify(restored));
     location.reload();
   } catch(e) {
     alert('Could not restore that backup: ' + e.message);
@@ -3013,9 +3088,9 @@ function restoreBackup() {
 var SYNC_TOKEN = 'R9pamfO0vJHFV55HqHisJwMJsntZrLIK';
 var SYNC_ENDPOINT = '/api/sync';
 var SYNC_FIELDS = ['tasks', 'weeklyPriorities', 'goals', 'reminders', 'stickyNotes', 'books', 'workouts',
-  'notes', 'workoutLogs', 'intention', 'pomSessions', 'habits', 'settings', '_deletedLabels'];
+  'notes', 'workoutLogs', 'intention', 'pomSessions', 'guides', 'workoutProgramLog', 'habits', 'settings', '_deletedLabels'];
 var SYNC_ID_ARRAYS = ['tasks', 'weeklyPriorities', 'goals', 'reminders', 'stickyNotes', 'books', 'workouts'];
-var SYNC_DATE_MAPS = ['notes', 'workoutLogs', 'intention', 'pomSessions'];
+var SYNC_DATE_MAPS = ['notes', 'workoutLogs', 'intention', 'pomSessions', 'guides', 'workoutProgramLog'];
 var _syncInFlight = false;
 
 function syncDeepEqual(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
@@ -3574,6 +3649,7 @@ function renderAll() {
   renderBooks();
   renderWorkouts();
   if (typeof renderDailyWorkoutLog === "function") renderDailyWorkoutLog();
+  renderProgram();
 }
 
 // ──────────────────────────────────────────
@@ -4540,6 +4616,7 @@ function switchView(v) {
   });
   document.querySelector(`[data-view="${v}"]`).classList.add('active');
   if (v === 'notes') renderPastNotes();
+  if (v === 'program') renderProgram();
   if (v === 'consistency') renderConsistency();
   if (v === 'weekly') { refreshWeekView(); renderWorkouts(); }
   if (v === 'monthly') { refreshMonthView(); renderMonthlyReading(); }
@@ -4561,6 +4638,210 @@ function toggleForm(id) {
 function escHtml(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ──────────────────────────────────────────
+// WORKOUT PROGRAM
+// The program is imported data (S.guides.workout), not part of this file: it
+// contains personal health details and this repo is public. Logged weights
+// live in S.workoutProgramLog, keyed 'w{week}-d{dayIndex}-e{exerciseIndex}'.
+// ──────────────────────────────────────────
+var PROGRAM_DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function getProgram() {
+  var p = S.guides && S.guides.workout;
+  return (p && Array.isArray(p.weeks) && p.weeks.length) ? p : null;
+}
+
+function currentProgramWeek(p) {
+  var n = parseInt(S.settings.programWeek, 10);
+  return p.weeks.some(function(w) { return parseInt(w.n, 10) === n; }) ? n : parseInt(p.weeks[0].n, 10);
+}
+
+function setProgramWeek(n) {
+  S.settings.programWeek = n;
+  save();
+  renderProgram();
+}
+
+function pickProgramFile() {
+  document.getElementById('program-file-input').click();
+}
+
+function importProgram(inputEl) {
+  var file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      var valid = data && data.type === 'workout-program' && Array.isArray(data.weeks) && data.weeks.length &&
+        data.weeks.every(function(w) { return w && isFinite(parseInt(w.n, 10)) && Array.isArray(w.days); });
+      if (!valid) { alert('That file does not look like a workout program.'); return; }
+      if (getProgram() && !confirm('Replace your current workout program? Your logged weights are kept.')) return;
+      S.guides = S.guides || {};
+      S.guides.workout = data;
+      save();
+      renderProgram();
+    } catch(e) {
+      alert('Could not read that file: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+  inputEl.value = '';
+}
+
+function logProgramInput(el) {
+  var key = el.getAttribute('data-k');
+  var field = el.getAttribute('data-f');
+  if (!S.workoutProgramLog) S.workoutProgramLog = {};
+  var cur = Object.assign({}, S.workoutProgramLog[key]);
+  cur[field] = el.value.trim();
+  if (!cur.w && !cur.r) delete S.workoutProgramLog[key];
+  else S.workoutProgramLog[key] = cur;
+  save();
+}
+
+function programExClass(pattern) {
+  var p = String(pattern || '').toLowerCase();
+  if (p.indexOf('priority') !== -1) return 'priority';
+  if (/^(power|weighted hiit|cardio)/.test(p)) return 'power';
+  if (p.indexOf('core') === 0) return 'core';
+  return '';
+}
+
+function programLocClass(loc) {
+  var l = String(loc || '').toUpperCase();
+  return l === 'GYM' ? 'gym' : (l === 'HOME' ? 'home' : 'rest');
+}
+
+function programMeta(e) {
+  var parts = [];
+  var sets = String(e.s || '').trim();
+  var reps = String(e.r || '').trim();
+  if (/^\d+$/.test(sets) && sets !== '1' && reps) parts.push(sets + ' × ' + reps);
+  else if (reps) parts.push(reps);
+  else if (sets && sets !== '—') parts.push(sets);
+  if (e.rest && e.rest !== '—') parts.push('rest ' + e.rest);
+  if (e.rpe && e.rpe !== '-' && e.rpe !== '—') parts.push(/^[\d.\s\-–]+$/.test(e.rpe) ? 'RPE ' + e.rpe : e.rpe);
+  if (e.t && e.t !== '—') parts.push('tempo ' + e.t);
+  return parts.map(function(x) { return '<span>' + escHtml(x) + '</span>'; }).join('');
+}
+
+function programDayHtml(wkNum, day, di, isToday) {
+  var h = '<details class="card pg-day' + (isToday ? ' is-today' : '') + '"' + (isToday ? ' open' : '') + '>';
+  h += '<summary><span class="pg-day-name">' + escHtml(day.day) + '</span>'
+    + '<span class="pg-loc ' + programLocClass(day.loc) + '">' + escHtml(day.loc) + '</span>'
+    + '<span class="pg-day-title">' + escHtml(day.title) + '</span>'
+    + (day.cap ? '<span class="pg-day-cap">' + escHtml(String(day.cap).replace(/\s*\(.*\)/, '')) + '</span>' : '')
+    + '</summary>';
+  var log = S.workoutProgramLog || {};
+  (day.ex || []).forEach(function(e, ei) {
+    var key = 'w' + wkNum + '-d' + di + '-e' + ei;
+    var cur = log[key] || {};
+    var prev = log['w' + (wkNum - 1) + '-d' + di + '-e' + ei] || {};
+    h += '<div class="pg-ex ' + programExClass(e.p) + '">'
+      + (e.p ? '<div class="pg-ex-pattern">' + escHtml(e.p) + '</div>' : '')
+      + '<div class="pg-ex-name">' + escHtml(e.n) + '</div>'
+      + '<div class="pg-ex-meta">' + programMeta(e) + '</div>'
+      + (e.c ? '<div class="pg-ex-cue">' + escHtml(e.c) + '</div>' : '')
+      + '<div class="pg-log">'
+      + '<input type="text" autocomplete="off" aria-label="Weight used" data-k="' + key + '" data-f="w" value="' + escHtml(cur.w) + '" placeholder="' + escHtml(prev.w ? 'Weight · last wk ' + prev.w : 'Weight used') + '" onchange="logProgramInput(this)">'
+      + '<input type="text" autocomplete="off" aria-label="Reps or RPE done" data-k="' + key + '" data-f="r" value="' + escHtml(cur.r) + '" placeholder="' + escHtml(prev.r ? 'Reps/RPE · last wk ' + prev.r : 'Reps / RPE done') + '" onchange="logProgramInput(this)">'
+      + '</div></div>';
+  });
+  return h + '</details>';
+}
+
+function programGuideHtml(p) {
+  var h = '<details class="card pg-guide" style="margin-top:16px;"><summary><i class="ti ti-book-2" aria-hidden="true"></i> Program guide</summary><div class="card-body">';
+  function list(title, items, tag) {
+    if (!items || !items.length) return '';
+    return '<div class="pg-sec-title">' + title + '</div><' + tag + ' class="pg-list">'
+      + items.map(function(t) { return '<li>' + escHtml(t) + '</li>'; }).join('') + '</' + tag + '>';
+  }
+  if (p.goal) h += '<div class="pg-sec-title">Goal</div><div class="pg-p">' + escHtml(p.goal) + '</div>';
+  if (p.coachNote && p.coachNote.length) {
+    h += '<div class="pg-sec-title">A note from your coach</div>';
+    p.coachNote.forEach(function(t) { h += '<div class="pg-p">' + escHtml(t) + '</div>'; });
+  }
+  if (p.schedule && p.schedule.length) {
+    h += '<div class="pg-sec-title">Weekly rhythm</div>';
+    p.schedule.forEach(function(s) {
+      h += '<div class="pg-row"><span class="k">' + escHtml(s.day) + '</span><span class="pg-loc ' + programLocClass(s.loc) + '">' + escHtml(s.loc) + '</span>'
+        + '<span class="grow">' + escHtml(s.focus) + '</span>' + (s.cap && s.cap !== '—' ? '<span class="m">' + escHtml(s.cap) + '</span>' : '') + '</div>';
+    });
+    if (p.scheduleNote) h += '<div class="pg-p" style="margin-top:8px;">' + escHtml(p.scheduleNote) + '</div>';
+  }
+  if (p.progression && p.progression.length) {
+    h += '<div class="pg-sec-title">The 8-week arc</div>';
+    p.progression.forEach(function(s) {
+      h += '<div class="pg-row"><span class="k">Wk ' + escHtml(s.weeks) + '</span><span class="grow"><b>' + escHtml(s.block) + '</b><br><span style="font-size:12px;color:var(--ink3);">' + escHtml(s.intent) + '</span></span><span class="m">' + escHtml(s.scheme) + '</span></div>';
+    });
+  }
+  if (p.notes && p.notes.length) {
+    h += '<div class="pg-sec-title">How this program is built around you</div>';
+    p.notes.forEach(function(n) {
+      h += '<div class="pg-note-title">' + escHtml(n.title) + '</div><div class="pg-p">' + escHtml(n.text) + '</div>';
+    });
+  }
+  h += list('Warm-up (8–10 min, every session)', p.warmup, 'ol');
+  h += list('Cardio &amp; fat loss', p.cardio, 'ul');
+  h += list('Rest &amp; recovery', p.recovery, 'ul');
+  return h + '</div></details>';
+}
+
+function renderProgram() {
+  var el = document.getElementById('program-body');
+  if (!el) return;
+  var sub = document.getElementById('program-sub');
+  var p = getProgram();
+  if (!p) {
+    if (sub) sub.textContent = 'Your training plan, always in your pocket.';
+    el.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;padding:36px 20px;">'
+      + '<div style="font-size:28px;color:var(--sage-mid);margin-bottom:8px;"><i class="ti ti-barbell" aria-hidden="true"></i></div>'
+      + '<div style="font-family:var(--font-display);font-size:22px;color:var(--ink);margin-bottom:6px;">No program loaded yet</div>'
+      + '<div style="font-size:13px;color:var(--ink3);line-height:1.5;max-width:380px;margin:0 auto 16px;">Import your program file (workout-program.json) once and it will sync to your other devices.</div>'
+      + '<button class="btn-add" onclick="pickProgramFile()">Import program</button></div></div>';
+    return;
+  }
+  if (sub) sub.textContent = p.title || 'Workout program';
+
+  var wkNum = currentProgramWeek(p);
+  var week = p.weeks.filter(function(w) { return parseInt(w.n, 10) === wkNum; })[0];
+  var todayAbbr = PROGRAM_DOW[new Date().getDay()];
+  var h = '';
+
+  var sched = (p.schedule || []).filter(function(s) { return s.day === todayAbbr; })[0];
+  if (sched) {
+    var isRest = String(sched.loc).toUpperCase() === 'REST';
+    h += '<div class="pg-today' + (isRest ? ' rest' : '') + '"><i class="ti ti-' + (isRest ? 'moon' : 'flame') + '" aria-hidden="true"></i>'
+      + '<b>Today · ' + todayAbbr + '</b><span>' + escHtml(sched.loc) + ' — ' + escHtml(sched.focus)
+      + (sched.cap && sched.cap !== '—' ? ' · ' + escHtml(sched.cap) : '') + '</span></div>';
+  }
+
+  h += '<div class="pg-weeks">';
+  p.weeks.forEach(function(w) {
+    var n = parseInt(w.n, 10);
+    h += '<button class="pg-week-btn' + (n === wkNum ? ' active' : '') + '" onclick="setProgramWeek(' + n + ')">W' + n + '</button>';
+  });
+  h += '</div>';
+
+  h += '<div class="pg-week-head"><div class="pg-week-kicker">Week ' + wkNum + ' of ' + p.weeks.length + '</div>'
+    + '<div class="pg-week-block">' + escHtml(week.block) + '</div>'
+    + (week.focus ? '<div class="pg-week-focus">' + escHtml(week.focus) + '</div>' : '')
+    + (week.vpush ? '<div class="pg-week-focus"><b>Vertical push:</b> ' + escHtml(week.vpush) + '</div>' : '')
+    + '</div>';
+
+  h += '<div class="stack">';
+  (week.days || []).forEach(function(day, di) {
+    h += programDayHtml(wkNum, day, di, String(day.day).toLowerCase().slice(0, 3) === todayAbbr.toLowerCase());
+  });
+  h += '</div>';
+
+  h += programGuideHtml(p);
+  h += '<div style="margin-top:14px;text-align:center;"><button class="icon-btn" style="width:auto;padding:0 14px;font-size:12px;" onclick="pickProgramFile()">Replace program file</button></div>';
+  el.innerHTML = h;
 }
 
 
