@@ -3331,6 +3331,15 @@ function refreshSyncStatus() {
   setSyncStatus(S._lastSyncedAt ? ('Last synced: ' + new Date(S._lastSyncedAt).toLocaleTimeString()) : 'Not synced yet');
 }
 
+// A hung request (weak signal) must fail rather than hang forever: while it hangs
+// _syncInFlight blocks every later sync, and the user keeps editing underneath it.
+var SYNC_TIMEOUT_MS = 20000;
+function syncFetch(url, opts) {
+  var ctrl = new AbortController();
+  var timer = setTimeout(function() { ctrl.abort(); }, SYNC_TIMEOUT_MS);
+  return fetch(url, Object.assign({}, opts, { signal: ctrl.signal })).finally(function() { clearTimeout(timer); });
+}
+
 async function syncNow() {
   if (_syncInFlight) return;
   _syncInFlight = true;
@@ -3339,7 +3348,7 @@ async function syncNow() {
     var attempts = 0;
     while (attempts < 2) {
       attempts++;
-      var getResp = await fetch(SYNC_ENDPOINT, { headers: { 'x-sync-token': SYNC_TOKEN } });
+      var getResp = await syncFetch(SYNC_ENDPOINT, { headers: { 'x-sync-token': SYNC_TOKEN } });
       if (!getResp.ok) throw new Error('Fetch failed (' + getResp.status + ')');
       var getBody = await getResp.json();
       var remoteData = getBody.data || {};
@@ -3348,7 +3357,7 @@ async function syncNow() {
       var localSlice = buildSyncSlice(S);
       var merged = syncMergeState(S._syncBase, localSlice, remoteData);
 
-      var postResp = await fetch(SYNC_ENDPOINT, {
+      var postResp = await syncFetch(SYNC_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-sync-token': SYNC_TOKEN },
         body: JSON.stringify({ data: merged, expectedUpdatedAt: remoteUpdatedAt })
@@ -3358,7 +3367,12 @@ async function syncNow() {
 
       if (!postResp.ok) throw new Error('Save failed (' + postResp.status + ')');
 
-      SYNC_FIELDS.forEach(function(f) { S[f] = merged[f]; });
+      // The user kept working while the request was in flight (on a slow connection that can be
+      // minutes). Assigning `merged` straight into S would silently erase those edits, so re-apply
+      // them on top: base = what we merged from, local = what S is now, remote = what we pushed.
+      // _syncBase stays at `merged`, so the next sync sees them as local changes and pushes them.
+      var reconciled = syncMergeState(localSlice, buildSyncSlice(S), merged);
+      SYNC_FIELDS.forEach(function(f) { S[f] = reconciled[f]; });
       S._syncBase = JSON.parse(JSON.stringify(merged));
       S._lastSyncedAt = Date.now();
       _lastSyncError = null;
@@ -3370,8 +3384,8 @@ async function syncNow() {
     }
     throw new Error('Sync conflict — please try again');
   } catch (e) {
-    _lastSyncError = e.message;
-    setSyncStatus('Sync failed: ' + e.message);
+    _lastSyncError = e.name === 'AbortError' ? 'Connection timed out' : e.message;
+    setSyncStatus('Sync failed: ' + _lastSyncError);
     _syncInFlight = false;
   }
 }
@@ -4751,6 +4765,7 @@ function escHtml(s) {
 // live in S.workoutProgramLog, keyed 'w{week}-d{dayIndex}-e{exerciseIndex}'.
 // ──────────────────────────────────────────
 var PROGRAM_DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var _pgRenderedWeek = null;
 
 function getProgram() {
   var p = S.guides && S.guides.workout;
@@ -5040,8 +5055,8 @@ function programDayHtml(wkNum, day, di, isToday) {
       + (e.c ? '<div class="pg-ex-cue">' + escHtml(e.c) + '</div>' : '')
       + '<div class="pg-sets"><span class="pg-sets-label">' + (nSets === 1 ? 'Done' : 'Sets') + '</span>' + setsHtml + '</div>'
       + '<div class="pg-log">'
-      + '<input type="text" autocomplete="off" aria-label="Weight used" data-k="' + key + '" data-f="w" value="' + escHtml(cur.w) + '" placeholder="' + escHtml(prev.w ? 'Weight · last wk ' + prev.w : 'Weight used') + '" onchange="logProgramInput(this)">'
-      + '<input type="text" autocomplete="off" aria-label="Reps or RPE done" data-k="' + key + '" data-f="r" value="' + escHtml(cur.r) + '" placeholder="' + escHtml(prev.r ? 'Reps/RPE · last wk ' + prev.r : 'Reps / RPE done') + '" onchange="logProgramInput(this)">'
+      + '<input type="text" autocomplete="off" aria-label="Weight used" data-k="' + key + '" data-f="w" value="' + escHtml(cur.w) + '" placeholder="' + escHtml(prev.w ? 'Weight · last wk ' + prev.w : 'Weight used') + '" oninput="logProgramInput(this)">'
+      + '<input type="text" autocomplete="off" aria-label="Reps or RPE done" data-k="' + key + '" data-f="r" value="' + escHtml(cur.r) + '" placeholder="' + escHtml(prev.r ? 'Reps/RPE · last wk ' + prev.r : 'Reps / RPE done') + '" oninput="logProgramInput(this)">'
       + '</div></div>';
   });
   return h + '</details>';
@@ -5138,7 +5153,23 @@ function renderProgram() {
 
   h += programGuideHtml(p);
   h += '<div style="margin-top:14px;text-align:center;"><button class="icon-btn" style="width:auto;padding:0 14px;font-size:12px;" onclick="pickProgramFile()">Replace program file</button></div>';
+
+  // A re-render (e.g. after a sync) must not collapse the cards the user has open mid-workout.
+  var prevDays = el.querySelectorAll('.pg-day');
+  var keepOpen = (prevDays.length && _pgRenderedWeek === wkNum) ? Array.prototype.map.call(prevDays, function(d) { return d.open; }) : null;
+  var prevGuide = el.querySelector('.pg-guide');
+  var guideOpen = !!(prevGuide && prevGuide.open);
+  var ae = document.activeElement;
+  var typing = (ae && ae.matches && ae.matches('#program-body .pg-log input'))
+    ? { k: ae.getAttribute('data-k'), f: ae.getAttribute('data-f'), s: ae.selectionStart, e: ae.selectionEnd } : null;
   el.innerHTML = h;
+  if (keepOpen) el.querySelectorAll('.pg-day').forEach(function(d, i) { if (i < keepOpen.length) d.open = keepOpen[i]; });
+  if (guideOpen) { var g = el.querySelector('.pg-guide'); if (g) g.open = true; }
+  if (typing) {
+    var again = el.querySelector('input[data-k="' + typing.k + '"][data-f="' + typing.f + '"]');
+    if (again) { again.focus(); try { again.setSelectionRange(typing.s, typing.e); } catch (err) {} }
+  }
+  _pgRenderedWeek = wkNum;
   updateProgramProgress();
 }
 
