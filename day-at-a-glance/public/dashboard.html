@@ -2430,6 +2430,9 @@
   .pg-ex-name { font-size:14px; font-weight:500; color:var(--ink); line-height:1.35; }
   .pg-ex-meta { display:flex; flex-wrap:wrap; gap:3px 14px; font-family:var(--font-mono); font-size:11.5px; color:var(--sage); margin-top:5px; }
   .pg-ex-cue { font-size:12px; color:var(--ink3); line-height:1.5; margin-top:6px; }
+  .pg-date-row { display:flex; align-items:center; gap:10px; padding:10px 18px; border-bottom:1px solid var(--cream-mid); font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink3); }
+  .pg-date-row input { font-family:var(--font-mono); font-size:12px; padding:5px 8px; border:1px solid var(--cream-dark); border-radius:var(--r-sm); background:var(--cream); color:var(--ink); outline:none; }
+  .pg-date-row input:focus { border-color:var(--sage-mid); }
   .pg-log { display:flex; gap:8px; margin-top:10px; }
   .pg-log input { flex:1; min-width:0; font-family:var(--font-body); font-size:13px; padding:7px 10px; border:1px solid var(--cream-dark); border-radius:var(--r-sm); background:var(--cream); color:var(--ink); outline:none; }
   .pg-log input:focus { border-color:var(--sage-mid); }
@@ -2466,6 +2469,21 @@
   .cl-tab { font-family:var(--font-body); font-size:13px; font-weight:500; padding:7px 16px; border-radius:20px; border:1px solid var(--cream-dark); background:var(--white); color:var(--ink2); cursor:pointer; }
   .cl-tab:hover { border-color:var(--sage-light); }
   .cl-tab.active { background:var(--sage); border-color:var(--sage); color:#fff; }
+  .hm-cell.clickable { cursor:pointer; }
+  .hm-cell.selected { outline:2px solid var(--ink); outline-offset:1px; }
+  .cons-hint { font-size:13px; color:var(--ink3); padding:14px 16px; background:var(--white); border:1px dashed var(--cream-dark); border-radius:var(--r-lg); }
+  .cons-detail-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .cons-detail-head .cl-tab { padding:5px 14px; font-size:16px; line-height:1; }
+  .cons-detail-head .cl-tab:disabled { opacity:0.35; cursor:default; }
+  .cons-detail-title { font-family:var(--font-display); font-size:22px; font-weight:500; color:var(--ink); text-align:center; }
+  .cons-detail-title small { display:block; font-family:var(--font-body); font-size:12px; color:var(--ink3); font-weight:400; }
+  .cons-log-row { padding:10px 0; border-bottom:1px solid var(--cream-mid); }
+  .cons-log-row:last-child { border-bottom:none; }
+  .cons-log-month { font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink3); margin-bottom:6px; }
+  .cons-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .cons-chip { font-size:12px; padding:3px 10px; border-radius:12px; background:var(--cream-mid); color:var(--ink2); }
+  .cons-chip.part { background:var(--sage-light); color:var(--ink); }
+  .cons-chip.full { background:var(--sage); color:#fff; }
   .cl-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:14px; }
   .cl-card { background:var(--white); border:1px solid var(--cream-dark); border-radius:var(--r-lg); padding:14px 16px 8px; }
   .cl-card.today { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold-mid); }
@@ -2962,9 +2980,14 @@
   <div id="view-consistency" class="view">
     <div class="page-header">
       <h2>Consistency</h2>
-      <div class="sub">Your last 60 days of habit consistency.</div>
+      <div class="sub">Your last 60 days of habits, workouts and cleaning.</div>
     </div>
-    <div class="stack">
+    <div class="cl-tabs">
+      <button class="cl-tab active" data-cons="habits" onclick="setConsTab(this)">Habits</button>
+      <button class="cl-tab" data-cons="workouts" onclick="setConsTab(this)">Workouts</button>
+      <button class="cl-tab" data-cons="cleaning" onclick="setConsTab(this)">Cleaning</button>
+    </div>
+    <div class="stack" id="cons-pane-habits">
       <!-- Summary cards -->
       <div>
         <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);margin-bottom:12px;">Streaks & completion</div>
@@ -2991,6 +3014,48 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="stack" id="cons-pane-workouts" style="display:none;">
+      <div>
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);margin-bottom:12px;">Streaks &amp; totals</div>
+        <div class="consistency-summary" id="cons-wo-summary"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="ti ti-barbell" aria-hidden="true"></i> 60-day workouts</div>
+        </div>
+        <div class="card-body">
+          <div class="heatmap-wrap"><div id="cons-wo-heatmap"></div></div>
+          <div class="hm-legend"><span>One row per workout type, in its own color. A week counts toward your streak when you hit your weekly goal.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack" id="cons-pane-cleaning" style="display:none;">
+      <div>
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);margin-bottom:12px;">Streaks &amp; completion</div>
+        <div class="consistency-summary" id="cons-cl-summary"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="ti ti-sparkles" aria-hidden="true"></i> 60-day cleaning</div>
+        </div>
+        <div class="card-body">
+          <div class="heatmap-wrap"><div id="cons-cl-heatmap"></div></div>
+          <div class="hm-legend">
+            <span>Less</span>
+            <div class="hm-legend-cell" style="background:var(--cream-mid);"></div>
+            <div class="hm-legend-cell" style="background:var(--sage-light);"></div>
+            <div class="hm-legend-cell" style="background:var(--sage-mid);"></div>
+            <div class="hm-legend-cell" style="background:var(--sage);"></div>
+            <span>More</span>
+            <span style="margin-left:12px;">Tap any day to see or edit what you did. A day counts toward your streak at 50% or more.</span>
+          </div>
+        </div>
+      </div>
+      <div id="cons-cl-detail"></div>
+      <div id="cons-cl-log"></div>
     </div>
   </div>
 
@@ -4901,7 +4966,8 @@ function syncProgramSession(wkNum, di, complete) {
   if (!S.workouts) S.workouts = [];
   var cur = S.workoutProgramLog[sk];
   if (complete) {
-    var date = (cur && cur.date) || todayKey();
+    var pending = S.workoutProgramLog[sk + '-date'];
+    var date = (cur && cur.date) || (pending && pending.date) || todayKey();
     S.workoutProgramLog[sk] = { date: date };
     programSessionTypes(day).forEach(function(type) {
       var has = S.workouts.some(function(w) { return w.date === date && w.type === type; });
@@ -4914,6 +4980,21 @@ function syncProgramSession(wkNum, di, complete) {
   save();
   renderDailyWorkoutLog();
   renderWorkouts();
+}
+
+// "Session date" on a day card: lets a workout done earlier be logged on the day it happened.
+// Stored as 'w{week}-d{day}-date'. If the session is already finished, it is moved to the new date.
+function setProgramSessionDate(el) {
+  var wk = parseInt(el.getAttribute('data-wk'), 10), di = parseInt(el.getAttribute('data-di'), 10);
+  var sk = 'w' + wk + '-d' + di, v = el.value;
+  if (v && v > todayKey()) { v = todayKey(); el.value = v; }
+  if (!S.workoutProgramLog) S.workoutProgramLog = {};
+  var finished = !!S.workoutProgramLog[sk];
+  if (finished) syncProgramSession(wk, di, false);
+  if (v) S.workoutProgramLog[sk + '-date'] = { date: v };
+  else delete S.workoutProgramLog[sk + '-date'];
+  if (finished) syncProgramSession(wk, di, true);
+  else save();
 }
 
 function programSessionOnDate(dateKey) {
@@ -5038,6 +5119,9 @@ function programDayHtml(wkNum, day, di, isToday) {
     + '<span class="pg-prog">0/' + (day.ex || []).length + '</span>'
     + '</summary>';
   var log = S.workoutProgramLog || {};
+  var sessKey = 'w' + wkNum + '-d' + di;
+  var sessDate = (log[sessKey] && log[sessKey].date) || (log[sessKey + '-date'] && log[sessKey + '-date'].date) || todayKey();
+  h += '<label class="pg-date-row"><span>Session date</span><input type="date" value="' + sessDate + '" max="' + todayKey() + '" data-wk="' + wkNum + '" data-di="' + di + '" onchange="setProgramSessionDate(this)"></label>';
   (day.ex || []).forEach(function(e, ei) {
     var key = 'w' + wkNum + '-d' + di + '-e' + ei;
     var cur = log[key] || {};
@@ -5234,6 +5318,8 @@ function toggleClean(el) {
   var boxes = card ? card.querySelectorAll('input[type=checkbox]') : [];
   if (el.checked && boxes.length && Array.prototype.every.call(boxes, function(b) { return b.checked; })) burstConfetti();
   renderCleaning();
+  var cv = document.getElementById('view-consistency');
+  if (cv && cv.classList.contains('active')) renderConsistency();
 }
 
 // opts: cls, topLeft, topRight, title, prefix, items, disabled
@@ -5376,7 +5462,7 @@ function renderMonthlyReading() {
   el.innerHTML = html;
 }
 
-function renderConsistency() {
+function renderHabitConsistency() {
   const presets = S.habits;
   if (!presets.length) {
     document.getElementById('consistency-summary').innerHTML =
@@ -5486,6 +5572,267 @@ function renderConsistency() {
       wrap.scrollLeft = wrap.scrollWidth;
     });
   }
+}
+
+// ── Consistency: separate trackers for habits, workouts and cleaning ──
+var _consTab = 'habits';
+var _consCleanDay = null;
+
+function renderConsistency() {
+  ['habits', 'workouts', 'cleaning'].forEach(function(t) {
+    var pane = document.getElementById('cons-pane-' + t);
+    if (pane) pane.style.display = t === _consTab ? '' : 'none';
+  });
+  document.querySelectorAll('[data-cons]').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-cons') === _consTab);
+  });
+  renderHabitConsistency();
+  renderWorkoutConsistency();
+  renderCleaningConsistency();
+}
+
+function setConsTab(el) {
+  _consTab = el.getAttribute('data-cons');
+  renderConsistency();
+}
+
+function consDays(n) {
+  var out = [], today = new Date();
+  for (var i = n - 1; i >= 0; i--) {
+    var d = new Date(today);
+    d.setDate(today.getDate() - i);
+    out.push({ date: d, key: cleanDateKey(d) });
+  }
+  return out;
+}
+
+function consDayLabel(d) { return MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getDate(); }
+
+// o: name, big, bigLabel, meta, optional pct (bar), color, spark
+function consCardHtml(o) {
+  return '<div class="cs-card"><div class="cs-card-name">' + escHtml(o.name) + '</div>'
+    + '<div style="display:flex;align-items:baseline;gap:8px;"><div class="cs-card-streak">' + o.big + '</div><span style="font-size:12px;color:var(--ink3);">' + escHtml(o.bigLabel) + '</span></div>'
+    + (o.pct != null ? '<div class="cs-card-bar"><div class="cs-card-fill" style="width:' + o.pct + '%' + (o.color ? ';background:' + o.color : '') + '"></div></div>' : '')
+    + '<div class="cs-card-meta" style="margin-top:4px;">' + o.meta + '</div>' + (o.spark || '') + '</div>';
+}
+
+function consSpark(values, color) {
+  var h = '<div style="display:flex;gap:2px;margin-top:8px;height:16px;align-items:flex-end;">';
+  values.forEach(function(v, i) {
+    h += '<div style="width:8px;height:' + (v > 0 ? Math.round(6 + 10 * Math.min(1, v)) : 6) + 'px;border-radius:3px;background:' + (v > 0 ? color : 'var(--cream-dark)') + ';' + (i === values.length - 1 ? 'box-shadow:0 0 0 1px var(--gold);' : '') + '"></div>';
+  });
+  return h + '</div>';
+}
+
+// rows: [{ label, cells: [{ bg, title }] }], one cell per entry in days
+function consHeatTable(days, rows, clickable) {
+  var todayStr = todayKey();
+  var monthRow = '<tr><td style="width:100px;"></td>', lastMonth = -1;
+  days.forEach(function(day) {
+    var m = day.date.getMonth();
+    if (m !== lastMonth) {
+      monthRow += '<td style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);padding:0 0 6px;white-space:nowrap;">' + MONTHS[m].slice(0, 3) + '</td>';
+      lastMonth = m;
+    } else monthRow += '<td></td>';
+  });
+  monthRow += '</tr>';
+  var body = rows.map(function(row) {
+    var cells = row.cells.map(function(c, i) {
+      var cls = 'hm-cell' + (days[i].key === todayStr ? ' today-cell' : '') + (clickable ? ' clickable' : '') + (clickable && days[i].key === _consCleanDay ? ' selected' : '');
+      return '<td><div class="' + cls + '"' + (c.bg ? ' style="background:' + c.bg + ';"' : '') + ' title="' + escHtml(c.title) + '"'
+        + (clickable ? ' data-day="' + days[i].key + '" onclick="pickConsCleanDay(this)"' : '') + '></div></td>';
+    }).join('');
+    return '<tr><td class="hm-task-label">' + escHtml(row.label) + '</td>' + cells + '</tr>';
+  }).join('');
+  return '<table class="heatmap-table"><thead>' + monthRow + '</thead><tbody>' + body + '</tbody></table>';
+}
+
+function consScrollRight(el) {
+  var wrap = el && el.parentElement;
+  if (wrap) requestAnimationFrame(function() { wrap.scrollLeft = wrap.scrollWidth; });
+}
+
+function renderWorkoutConsistency() {
+  var sumEl = document.getElementById('cons-wo-summary');
+  var hmEl = document.getElementById('cons-wo-heatmap');
+  if (!sumEl || !hmEl) return;
+  var days = consDays(60), types = getWoTypes(), today = new Date();
+  var has = function(key, type) {
+    return getWorkoutsForDay(key).some(function(w) { return !type || w.type === type; });
+  };
+  // Sunday-start weeks, like the weekly view
+  function weekCount(offset) {
+    var start = new Date(today);
+    start.setDate(today.getDate() - today.getDay() - offset * 7);
+    var n = 0;
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(start);
+      d.setDate(start.getDate() + i);
+      if (has(cleanDateKey(d))) n++;
+    }
+    return n;
+  }
+  var thisWeek = weekCount(0);
+  var streak = 0;
+  for (var o = thisWeek >= WO_GOAL ? 0 : 1; o < 104 && weekCount(o) >= WO_GOAL; o++) streak++;
+  var activeDays = days.filter(function(d) { return has(d.key); }).length;
+  var last14 = days.slice(-14);
+
+  var cards = [
+    consCardHtml({ name: 'This week', big: thisWeek, bigLabel: 'of ' + WO_GOAL + ' sessions', pct: Math.min(100, Math.round(100 * thisWeek / WO_GOAL)), meta: thisWeek >= WO_GOAL ? 'Goal hit' : (WO_GOAL - thisWeek) + ' to go' }),
+    consCardHtml({ name: 'Week streak', big: streak, bigLabel: streak === 1 ? 'week' : 'weeks', meta: WO_GOAL + '+ sessions each week' }),
+    consCardHtml({ name: 'Active days', big: activeDays, bigLabel: 'of 60', pct: Math.round(100 * activeDays / 60), meta: 'any workout', spark: consSpark(last14.map(function(d) { return has(d.key) ? 1 : 0; }), 'var(--sage-mid)') })
+  ];
+  types.forEach(function(t) {
+    var n = days.filter(function(d) { return has(d.key, t.name); }).length;
+    cards.push(consCardHtml({ name: t.name, big: n, bigLabel: n === 1 ? 'day' : 'days', pct: Math.round(100 * n / 60), color: t.color, meta: 'last 60 days',
+      spark: consSpark(last14.map(function(d) { return has(d.key, t.name) ? 1 : 0; }), t.color) }));
+  });
+  sumEl.innerHTML = cards.join('');
+
+  var rows = [{ label: 'Any workout', cells: days.map(function(d) {
+    var h = has(d.key);
+    return { bg: h ? 'var(--sage)' : '', title: 'Any workout - ' + consDayLabel(d.date) + (h ? ' ✓' : '') };
+  }) }];
+  types.forEach(function(t) {
+    rows.push({ label: t.name, cells: days.map(function(d) {
+      var h = has(d.key, t.name);
+      return { bg: h ? t.color : '', title: t.name + ' - ' + consDayLabel(d.date) + (h ? ' ✓' : '') };
+    }) });
+  });
+  hmEl.innerHTML = consHeatTable(days, rows, false);
+  consScrollRight(hmEl);
+}
+
+function cleanDayStats(key) {
+  var d = new Date(key + 'T12:00:00');
+  var block = CLEANING.weekly[cleanDowIdx(d)];
+  var dTotal = CLEANING.daily.items.length, bTotal = block.items.length;
+  var dd = cleanDone('d|' + key, dTotal), bd = cleanDone('w|' + key, bTotal);
+  return { daily: dd, dailyTotal: dTotal, block: bd, blockTotal: bTotal, blockTitle: block.title, pct: (dd + bd) / (dTotal + bTotal), dailyPct: dd / dTotal, blockPct: bd / bTotal };
+}
+
+function consShade(p) {
+  return p <= 0 ? '' : (p < 0.5 ? 'var(--sage-light)' : (p < 1 ? 'var(--sage-mid)' : 'var(--sage)'));
+}
+
+function pickConsCleanDay(el) {
+  _consCleanDay = el.getAttribute('data-day');
+  renderConsistency();
+  var d = document.getElementById('cons-cl-detail');
+  if (d) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function stepConsCleanDay(el) {
+  if (!_consCleanDay) return;
+  var d = new Date(_consCleanDay + 'T12:00:00');
+  d.setDate(d.getDate() + parseInt(el.getAttribute('data-delta'), 10));
+  var key = cleanDateKey(d);
+  if (key > todayKey()) return;
+  _consCleanDay = key;
+  renderConsistency();
+}
+
+function cleanDetailHtml() {
+  var key = _consCleanDay;
+  if (!key) return '<div class="cons-hint">Tap any day in the heatmap to see what you did, or to fill in a day you forgot to check off.</div>';
+  var d = new Date(key + 'T12:00:00');
+  var block = CLEANING.weekly[cleanDowIdx(d)];
+  var st = cleanDayStats(key);
+  var C = CLEANING;
+  return '<div class="cons-detail-head"><button class="cl-tab" data-delta="-1" onclick="stepConsCleanDay(this)" aria-label="Previous day">‹</button>'
+    + '<div class="cons-detail-title">' + DAYS_SHORT[d.getDay()] + ', ' + CLEAN_MONTHS[d.getMonth()] + ' ' + d.getDate()
+    + '<small>' + Math.round(st.pct * 100) + '% done</small></div>'
+    + '<button class="cl-tab" data-delta="1" onclick="stepConsCleanDay(this)" aria-label="Next day"' + (key >= todayKey() ? ' disabled' : '') + '>›</button></div>'
+    + '<div class="cl-grid">'
+    + cleanCardHtml({ cls: 'daily', topLeft: 'Every day', topRight: C.daily.mins + ' min', title: C.daily.title, prefix: 'd|' + key, items: C.daily.items })
+    + cleanCardHtml({ cls: '', topLeft: block.day, topRight: block.mins + ' min', title: block.title, prefix: 'w|' + key, items: block.items })
+    + '</div>';
+}
+
+function cleanLogHtml() {
+  var months = {};
+  Object.keys(S.cleaningChecks || {}).forEach(function(k) {
+    var m = /^[mq]\|(\d{4}-\d{2})\|/.exec(k);
+    if (m) months[m[1]] = true;
+  });
+  months[cleanMonthKey(new Date())] = true;
+  var list = Object.keys(months).sort().reverse().slice(0, 6);
+  var chip = function(title, n, total) {
+    return '<span class="cons-chip' + (n === total ? ' full' : (n ? ' part' : '')) + '">' + escHtml(title) + ' ' + n + '/' + total + '</span>';
+  };
+  var h = '<div class="card"><div class="card-header"><div class="card-title"><i class="ti ti-calendar-month" aria-hidden="true"></i> Monthly &amp; quarterly log</div></div><div class="card-body">';
+  list.forEach(function(mk) {
+    var parts = CLEANING.monthly.map(function(b, i) { return chip(b.title, cleanDone('m|' + mk + '|' + i, b.items.length), b.items.length); });
+    var mon = parseInt(mk.slice(5, 7), 10) - 1;
+    var g = CLEANING.quarterly[mon % 3];
+    parts.push(chip('Deep clean: ' + g.title, cleanDone('q|' + mk + '|' + (mon % 3), g.items.length), g.items.length));
+    h += '<div class="cons-log-row"><div class="cons-log-month">' + CLEAN_MONTHS[mon] + ' ' + mk.slice(0, 4) + '</div><div class="cons-chips">' + parts.join('') + '</div></div>';
+  });
+  return h + '</div></div>';
+}
+
+function renderCleaningConsistency() {
+  var sumEl = document.getElementById('cons-cl-summary');
+  var hmEl = document.getElementById('cons-cl-heatmap');
+  if (!sumEl || !hmEl) return;
+  var days = consDays(60), todayStr = todayKey(), C = CLEANING;
+  var stats = {};
+  days.forEach(function(d) { stats[d.key] = cleanDayStats(d.key); });
+
+  var first = null;
+  Object.keys(S.cleaningChecks || {}).forEach(function(k) {
+    var m = /^[dw]\|(\d{4}-\d{2}-\d{2})\|/.exec(k);
+    if (m && (!first || m[1] < first)) first = m[1];
+  });
+
+  // A day still in progress doesn't break a streak; it just doesn't count yet.
+  function streakOf(test) {
+    var n = 0;
+    for (var i = days.length - 1; i >= 0; i--) {
+      var s = stats[days[i].key];
+      if (test(s)) n++;
+      else if (days[i].key === todayStr && n === 0) continue;
+      else break;
+    }
+    return n;
+  }
+  var dayStreak = streakOf(function(s) { return s.pct >= 0.5; });
+  var dailyStreak = streakOf(function(s) { return s.daily === s.dailyTotal; });
+  var tracked = days.slice(-30).filter(function(d) { return first && d.key >= first; });
+  var avg = tracked.length ? Math.round(100 * tracked.reduce(function(a, d) { return a + stats[d.key].pct; }, 0) / tracked.length) : 0;
+  var last14 = days.slice(-14);
+
+  var now = new Date(), monthK = cleanMonthKey(now), qGroup = now.getMonth() % 3;
+  var blocksDone = C.monthly.filter(function(b, i) { return cleanDone('m|' + monthK + '|' + i, b.items.length) === b.items.length; }).length;
+  var qg = C.quarterly[qGroup];
+  var qDone = cleanDone('q|' + monthK + '|' + qGroup, qg.items.length);
+
+  sumEl.innerHTML = [
+    consCardHtml({ name: 'Day streak', big: dayStreak, bigLabel: dayStreak === 1 ? 'day' : 'days', meta: '50%+ of the day done', spark: consSpark(last14.map(function(d) { return stats[d.key].pct; }), 'var(--sage-mid)') }),
+    consCardHtml({ name: 'Daily Reset streak', big: dailyStreak, bigLabel: dailyStreak === 1 ? 'day' : 'days', meta: 'all ' + C.daily.items.length + ' items', spark: consSpark(last14.map(function(d) { return stats[d.key].dailyPct; }), 'var(--gold)') }),
+    consCardHtml({ name: 'Average', big: avg + '%', bigLabel: 'last 30 days', pct: avg, meta: first ? 'tracking since ' + consDayLabel(new Date(first + 'T12:00:00')) : 'nothing tracked yet' }),
+    consCardHtml({ name: 'This month', big: blocksDone, bigLabel: 'of 4 monthly blocks', pct: Math.round(100 * blocksDone / 4), color: 'var(--gold)', meta: escHtml(qg.title) + ' deep clean ' + qDone + '/' + qg.items.length })
+  ].join('');
+
+  var rowDefs = [
+    { label: 'Overall', get: function(s) { return { p: s.pct, t: s.daily + s.block + '/' + (s.dailyTotal + s.blockTotal) }; } },
+    { label: 'Daily Reset', get: function(s) { return { p: s.dailyPct, t: s.daily + '/' + s.dailyTotal }; } },
+    { label: 'Room block', get: function(s) { return { p: s.blockPct, t: s.blockTitle + ' ' + s.block + '/' + s.blockTotal }; } }
+  ];
+  var rows = rowDefs.map(function(rd) {
+    return { label: rd.label, cells: days.map(function(d) {
+      var g = rd.get(stats[d.key]);
+      return { bg: consShade(g.p), title: rd.label + ' - ' + consDayLabel(d.date) + ' - ' + g.t };
+    }) };
+  });
+  hmEl.innerHTML = consHeatTable(days, rows, true);
+  consScrollRight(hmEl);
+
+  var det = document.getElementById('cons-cl-detail');
+  if (det) det.innerHTML = cleanDetailHtml();
+  var log = document.getElementById('cons-cl-log');
+  if (log) log.innerHTML = cleanLogHtml();
 }
 
 
